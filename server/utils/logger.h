@@ -34,7 +34,7 @@ void closeLogFile(Logger* logger);
  * @param buffer
  * @param bufferSize
 */
-void getCurrentTimestamp(char* buffer, size_t bufferSize);
+void getCurrentTimeStamp(char* buffer, size_t bufferSize);
 
 /**
  * @brief write log message to the log file

@@ -1,14 +1,23 @@
 #include "logger.h"
 
+// Get the current timestamp
+void getCurrentTimeStamp(char* buffer, size_t bufferSize) {
+    time_t rawTime;
+    struct tm* timeInfo;
+    time(&rawTime);
+    timeInfo = localtime(&rawTime);
+    strftime(buffer, bufferSize, "%Y-%m-%d %H:%M:%S", timeInfo);
+}
+
 // Open the log file
 void openLogFile(Logger* logger) {
     // Generate timestamp for the log file name
     char timestamp[20];
-    getCurrentTimestamp(timestamp, sizeof(timestamp));
+    getCurrentTimeStamp(timestamp, sizeof(timestamp));
 
     // Create the log file with the timestamp in its name
-    char filename[30];
-    snprintf(filename, sizeof(filename), "logfile_%s.txt", timestamp);
+    char filename[40];
+    snprintf(filename, sizeof(filename), "log/logfile_%s.txt", timestamp);
 
     logger->file = fopen(filename, "w");
     if (logger->file == NULL) {
@@ -23,20 +32,11 @@ void closeLogFile(Logger* logger) {
     }
 }
 
-// Get the current timestamp
-void getCurrentTimestamp(char* buffer, size_t bufferSize) {
-    time_t rawTime;
-    struct tm* timeInfo;
-    time(&rawTime);
-    timeInfo = localtime(&rawTime);
-    strftime(buffer, bufferSize, "%Y-%m-%d %H:%M:%S", timeInfo);
-}
-
 // Write log message to the log file
 void writeToLogFile(Logger* logger, const char* levelStr, const char* message) {
     if (logger->file != NULL) {
         char timestamp[20];
-        getCurrentTimestamp(timestamp, sizeof(timestamp));
+        getCurrentTimeStamp(timestamp, sizeof(timestamp));
         fprintf(logger->file, "[%s] %s: %s\n", timestamp, levelStr, message);
         fflush(logger->file);
     }
