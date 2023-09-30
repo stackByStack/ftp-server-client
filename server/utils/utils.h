@@ -3,5 +3,6 @@
 
 #include "socketConn.h"
 #include "threadPool.h"
+#include "logger.h"
 
 #endif
