@@ -51,3 +51,7 @@ An encoded pathname is a string of bytes not containing \012. It normally repres
 - the server's current name prefix;
 - a slash, if the name prefix does not end with a slash; and
 - the string obtained by replacing each \000 in the encoded pathname with \012.
+
+# TODO
+
+- [ ] socketConn.h socket_recv_data modify memset to a more efficient way.
