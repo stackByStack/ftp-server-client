@@ -132,7 +132,7 @@ int socket_send_response(int sockfd, int rc, char *msg)
 {
     char buf[MAXSIZE];
     memset(buf, 0, MAXSIZE);
-    sprintf(buf, "%d %s\n", rc, msg);
+    sprintf(buf, "%d %s", rc, msg);
     if (socket_send_data(sockfd, buf, MAXSIZE) < 0)
     {
         #ifdef DEBUG

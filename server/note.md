@@ -54,4 +54,10 @@ An encoded pathname is a string of bytes not containing \012. It normally repres
 
 # TODO
 
-- [ ] socketConn.h socket_recv_data modify memset to a more efficient way.
+- [ ] socketConn.h: socket_recv_data modify memset to a more efficient way.
+- [ ] server.c: int connfd = socket_accept(sockfd);
+        if(connfd < 0)
+        {
+            continue; // possibly break; also works.
+        }
+- [ ]
