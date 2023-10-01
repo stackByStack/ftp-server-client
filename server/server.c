@@ -112,7 +112,7 @@ int ftp_login(int sock_cmd, char *password)
         // now it starts with USER, retrieve the username
         int n = 5;
         int i = 0;
-        while(buf[n] != 0)
+        while(buf[n] != '\n' && buf[n] != '\r')
         {
             username[i++] = buf[n++];
         }
@@ -161,7 +161,7 @@ int ftp_login(int sock_cmd, char *password)
         // now it starts with PASS, retrieve the password
         n = 5;
         i = 0;
-        while(buf[n] != 0)
+        while(buf[n] != '\n' && buf[n] != '\r')
         {
             password[i++] = buf[n++];
         }
@@ -286,7 +286,7 @@ int parse_command(int socket_cmd, char *buf, char *cmd, char *arg)
     cmd[i] = 0;
     i++;
     int j = 0;
-    while (buf[i] != 0)
+    while (buf[i] != '\n' && buf[i] != 0 && buf[i] != '\r')
     {
         arg[j] = buf[i];
         i++;
