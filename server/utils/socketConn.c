@@ -142,3 +142,39 @@ int socket_send_response(int sockfd, int rc, char *msg)
     }
     return 0;
 }
+
+int socket_get_ip(char *ip)
+{
+    char host[100];
+    struct hostent *hostinfo;
+
+    if (gethostname(host, sizeof(host)) < 0)
+    {
+        #ifdef DEBUG
+        perror("Error getting host name");
+        #endif
+        return -1;
+    }
+
+    if ((hostinfo = gethostbyname(host)) == NULL)
+    {
+        #ifdef DEBUG
+        perror("Error getting host by name");
+        #endif
+        return -1;
+    }
+
+    struct in_addr **addr_list = (struct in_addr **)hostinfo->h_addr_list;
+
+    if (addr_list[0] == NULL)
+    {
+        #ifdef DEBUG
+        fprintf(stderr, "No IP address found for the host\n");
+        #endif
+        return -1;
+    }
+
+    strcpy(ip, inet_ntoa(*addr_list[0]));
+
+    return 0;
+}

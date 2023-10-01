@@ -83,4 +83,12 @@ int socket_send_response(int sockfd, int rc, char *msg);
  */
 int socket_close(int sockfd);
 
+/**
+ * @brief Get the IP address of the host
+ * 
+ * @param ip 
+ * @return -1 on error, 0 on success
+ */
+int socket_get_ip(char *ip);
+
 #endif
