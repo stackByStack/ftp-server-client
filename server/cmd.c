@@ -169,6 +169,7 @@ int pasv_process(int sock_cmd, int *sock_data, int *dataLinkEstablished, pthread
     arg->pool = pool;
     arg->mutex = mutex;
     submit_task(pool, listen_pasv, arg);
+    return 0;
 }
 
 void listen_pasv(void *args)

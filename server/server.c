@@ -336,6 +336,21 @@ void process_command(void *args)
             return;
         }
     }
+    // else if cmd is PASV, we need to establish a data connection
+    else if(strncmp(cmd, "PASV", 4) == 0)
+    {
+        if(pasv_process(sock_cmd, sock_data, arg, dataLinkEstablished, mutex_data, passive_mode) != 0)
+        {
+            logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, PASV command failed.\n", sock_cmd);
+            return;
+        }
+        else 
+        {
+            logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, PASV command successful.\n", sock_cmd);
+            return;
+        }
+    }
+    
 
     
 
