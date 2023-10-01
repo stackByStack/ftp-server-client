@@ -44,7 +44,7 @@ int socket_create(int port)
     return sockfd;
 }
 
-int socket_connect(int port, char *host)
+int socket_connect(char *host, int port)
 {
     int sockfd;
     struct sockaddr_in s_addr;

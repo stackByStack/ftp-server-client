@@ -10,27 +10,26 @@ int main(int argc, char *argv[])
     // pass two arguments: port that would be listened on: -port n -root /path/to/dir
     // and the directory to be served
 
-    if (argc != 4 || strcmp(argv[1], "-port") != 0)
-    {
-        logMessage(&logger, LOG_LEVEL_ERROR, "Usage: %s -port n -root /path/to/dir\n", argv[0]);
+    // Parse the arguments
+    if (argc < 3 || strcmp(argv[1], "-port") != 0) {
+        logMessage(&logger, LOG_LEVEL_ERROR, "Usage: %s -port n [-root /path/to/dir]\n", argv[0]);
         exit(1);
     }
 
     // Get the port number
     int port = atoi(argv[2]);
-    if (port <= 0)
-    {
+    if (port <= 0) {
         logMessage(&logger, LOG_LEVEL_ERROR, "Invalid port number\n");
         exit(1);
     }
 
-    // Get the directory after -root to be served
-    char *rootWorkDir = argv[4];
-    if (rootWorkDir == NULL)
-    {
-        logMessage(&logger, LOG_LEVEL_ERROR, "Invalid root directory\n");
-        exit(1);
+    // Set the default root directory if not provided
+    char *rootWorkDir = "/tmp";
+    if (argc >= 5 && strcmp(argv[3], "-root") == 0) {
+        rootWorkDir = argv[4];
     }
+
+    logMessage(&logger, LOG_LEVEL_INFO, "port: %d, rootWorkDir: %s\n", port, rootWorkDir);
 
     // Create a socket
     int sock_listen = socket_create(port);
@@ -68,6 +67,7 @@ int main(int argc, char *argv[])
 
         ftp_session_arg *arg = (ftp_session_arg *)malloc(sizeof(ftp_session_arg));
         arg->sock_cmd = sock_cmd;
+        strcpy(arg->rootWorkDir, rootWorkDir);
 
         submit_task(&pool, ftp_session, (void *)arg);
     }
@@ -100,11 +100,11 @@ int ftp_login(int sock_cmd, char *password)
         {
             if(strncmp(buf, "QUIT", 4) == 0)
             {
-                send_response(sock_cmd, 221, "Goodbye.\r\n");
+                socket_send_response(sock_cmd, 221, "Goodbye.\r\n");
                 logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, quit\n", sock_cmd);
                 return 0;
             }
-            send_response(sock_cmd, 500, "Invalid command. Example: USER: your_user_name.\r\n");
+            socket_send_response(sock_cmd, 500, "Invalid command. Example: USER: your_user_name.\r\n");
             logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Invalid command. Expected USER.\n", sock_cmd);
             continue;
         }
@@ -123,7 +123,7 @@ int ftp_login(int sock_cmd, char *password)
         logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, username: %s\n", sock_cmd, username);
         
         //return 331 code to ask for passwd
-        send_response(sock_cmd, 331, "Please specify the password.\r\n");
+        socket_send_response(sock_cmd, 331, "Please specify the password.\r\n");
 
         // We will check whether the username is anonymous after we get the password 
         // taking account of the issues of security.
@@ -141,11 +141,11 @@ int ftp_login(int sock_cmd, char *password)
         {
             if(strncmp(buf, "QUIT", 4) == 0)
             {
-                send_response(sock_cmd, 221, "Goodbye.\r\n");
+                socket_send_response(sock_cmd, 221, "Goodbye.\r\n");
                 logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, quit\n", sock_cmd);
                 return 0;
             }
-            send_response(sock_cmd, 500, "Invalid command. Example: PASS your_password. Please resubmit your username and passwd.\r\n");
+            socket_send_response(sock_cmd, 500, "Invalid command. Example: PASS your_password. Please resubmit your username and passwd.\r\n");
             logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Invalid command. Expected PASS.\n", sock_cmd);
             continue;
         }
@@ -153,7 +153,7 @@ int ftp_login(int sock_cmd, char *password)
         //Check whether the username is anonymous firstly
         if(strncmp(username, user_given, strlen(user_given)) != 0)
         {
-            send_response(sock_cmd, 530, "Only anonymous login is supported.\r\n");
+            socket_send_response(sock_cmd, 530, "Only anonymous login is supported.\r\n");
             logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Only anonymous login is supported.\n", sock_cmd);
             continue;
         }
@@ -172,7 +172,7 @@ int ftp_login(int sock_cmd, char *password)
         logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, identity: %s\n", sock_cmd, password);
 
         //Check success
-        send_response(sock_cmd, 230, "Login successful.\r\n");
+        socket_send_response(sock_cmd, 230, "Login successful.\r\n");
         logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, Login successful.\n", sock_cmd);
         break;
     }
@@ -182,11 +182,23 @@ int ftp_login(int sock_cmd, char *password)
 void ftp_session(void *arg)
 {
     
-    char password[MAXSIZE];
+    char password[MAXSIZE]; //identity of the user
     ftp_session_arg *session = (ftp_session_arg *)arg;
 
     // Get the cmd socket descriptor
     int sock_cmd = session->sock_cmd;
+    // Get the root directory to be served
+    char *rootWorkDir = session->rootWorkDir;
+    // Get the thread pool
+    ThreadPool *pool = session->pool;
+
+    int dataLinkEstablished = 0; //flag to indicate whether the data link is established
+    int passive_mode = 0; //flag to indicate whether the passive mode is on
+    int sock_data; //socket descriptor of the data connection
+    pthread_mutex_t mutex_data; //mutex for the data connection
+    //init mutex
+    pthread_mutex_init(&mutex_data, NULL);
+
     //logMessage with socket descriptor
     logMessage(&logger, LOG_LEVEL_INFO, "ftp session started with socket descriptor %d\n", sock_cmd);
 
@@ -202,5 +214,133 @@ void ftp_session(void *arg)
         return;
     }
 
-    // free(arg);
+    // Now we have logged in, we can start to process the commands
+    char buf[MAXSIZE];
+    char cmd[MAXSIZE] = {0};
+    char arg[MAXSIZE] = {0};
+    char cwd[MAXSIZE] = "/";
+    char path[MAXSIZE] = {0};
+
+    while(1) 
+    {
+        // Receive the command
+        if ((recv_data(sock_cmd, buf, sizeof(buf))) == -1)
+        {
+            #ifdef DEBUG
+            perror("recv cmd data error\n");
+            #endif
+            logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, recv cmd data error\n", sock_cmd);
+            exit(1);
+        }
+        
+        logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, identity: %s, cmd: %s\n", sock_cmd, password, buf);
+        
+        // Parse the command
+        parse_command(sock_cmd, buf, cmd, arg);
+
+        //check whether the command is QUIT
+        if(strncmp(cmd, "QUIT", 4) == 0)
+        {
+            socket_send_response(sock_cmd, 221, "Goodbye.\r\n");
+            logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, quit\n", sock_cmd);
+            break;
+        }
+        
+        // send Process the command to thread pool
+        process_command_arg *arg = (process_command_arg *)malloc(sizeof(process_command_arg));
+        arg->sock_cmd = sock_cmd;
+        arg->dataLinkEstablished = &dataLinkEstablished;
+        arg->sock_data = &sock_data;
+        arg->mutex_data = &mutex_data;
+        arg->passive_mode = &passive_mode;
+        strcpy(arg->cmd, cmd);
+        strcpy(arg->arg, arg);
+        strcpy(arg->cwd, cwd);
+        strcpy(arg->rootWorkDir, rootWorkDir);
+        submit_task(pool, process_command, (void *)arg);
+        
+    }
+
+    close(sock_cmd);
+    if(dataLinkEstablished)
+    {
+        pthread_mutex_lock(&mutex_data);
+        close(sock_data);
+        pthread_mutex_unlock(&mutex_data);
+        logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, data connection closed\n", sock_cmd);
+    }
+    pthread_mutex_destroy(&mutex_data);
+    logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, ftp session ended\n", sock_cmd);
+    free(arg);
+}
+
+int parse_command(int socket_cmd, char *buf, char *cmd, char *arg)
+{
+    // Parse the command
+    int i = 0;
+    while (buf[i] != ' ' && buf[i] != 0)
+    {
+        cmd[i] = buf[i];
+        i++;
+    }
+    cmd[i] = 0;
+    i++;
+    int j = 0;
+    while (buf[i] != 0)
+    {
+        arg[j] = buf[i];
+        i++;
+        j++;
+    }
+    arg[j] = 0;
+    #ifdef DEBUG
+    printf("cmd: %s, arg: %s\n", cmd, arg);
+    #endif
+    logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, cmd: %s, arg: %s\n", socket_cmd, cmd, arg);
+
+}
+
+void process_command(void *args)
+{
+    //parse the arguments
+    process_command_arg *argp = (process_command_arg *)args;
+    int sock_cmd = argp->sock_cmd;
+    char *cmd = argp->cmd;
+    char *arg = argp->arg;
+    char *cwd = argp->cwd;
+    char *rootWorkDir = argp->rootWorkDir;
+    int *dataLinkEstablished = argp->dataLinkEstablished;
+    int *sock_data = argp->sock_data;
+    int *passive_mode = argp->passive_mode;
+    pthread_mutex_t *mutex_data = argp->mutex_data;
+
+    //check the command whether is null
+    if(cmd[0] == 0)
+    {
+        socket_send_response(sock_cmd, 500, "Invalid command.\r\n");
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Invalid command.\n", sock_cmd);
+        return;
+    }
+
+    // if cmd is PORT, we need to establish a data connection
+    if(strncmp(cmd, "PORT", 4) == 0)
+    {
+        if(port_process(sock_cmd, sock_data, arg, dataLinkEstablished, mutex_data, passive_mode) != 0)
+        {
+            logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, PORT command failed.\n", sock_cmd);
+            return;
+        }
+        else 
+        {
+            logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, PORT command successful.\n", sock_cmd);
+            return;
+        }
+    }
+
+    
+
+
+
+
+    free(argp);
 }

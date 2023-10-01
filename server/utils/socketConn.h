@@ -34,7 +34,7 @@ int socket_create(int port);
  * @param host 
  * @return socket fd on success, -1 on error
  */
-int socket_connect(int port, char *host);
+int socket_connect(char *host, int port);
 
 /**
  * @brief Accept a connection on a socket
