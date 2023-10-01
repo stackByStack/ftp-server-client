@@ -92,15 +92,39 @@ int socket_accept(int listenfd)
 
 int socket_recv_data(int sockfd, char *buf, int bufsize)
 {
-    int len;
-    if ((len = recv(sockfd, buf, bufsize, 0)) < 0)
+    int total_len = 0;
+    int recv_len;
+
+    // Loop until the complete command is received or an error occurs
+    while (total_len < MAXSIZE - 1)
     {
-        #ifdef DEBUG
-        perror("recv data error");
-        #endif
-        return -1;
+        recv_len = recv(sockfd, buf + total_len, bufsize - total_len - 1, 0);
+
+        if (recv_len < 0)
+        {
+            #ifdef DEBUG
+            perror("recv data error");
+            #endif
+            return -1;
+        }
+        else if (recv_len == 0)
+        {
+            // Connection closed by the other end
+            break;
+        }
+
+        total_len += recv_len;
+
+        // Check if the complete command is received
+        if (buf[total_len - 1] == '\n')
+        {
+            break;
+        }
     }
-    return len;
+
+    buf[total_len] = '\0'; // Null-terminate the received data
+
+    return total_len;
 }
 
 int socket_send_data(int sockfd, char *buf, int bufsize)

@@ -85,7 +85,7 @@ int ftp_login(int sock_cmd, char *password)
 
     while (1)
     {
-        if ((recv_data(sock_cmd, buf, sizeof(buf))) == -1)
+        if ((socket_recv_data(sock_cmd, buf, sizeof(buf))) == -1)
         {
             #ifdef DEBUG
             perror("recv login username data error\n");
@@ -129,7 +129,7 @@ int ftp_login(int sock_cmd, char *password)
         // taking account of the issues of security.
 
         // receive password and check whether starts with PASS
-        if ((recv_data(sock_cmd, buf, sizeof(buf))) == -1)
+        if ((socket_recv_data(sock_cmd, buf, sizeof(buf))) == -1)
         {
             #ifdef DEBUG
             perror("recv login passwd data error\n");
@@ -224,7 +224,7 @@ void ftp_session(void *arg)
     while(1) 
     {
         // Receive the command
-        if ((recv_data(sock_cmd, buf, sizeof(buf))) == -1)
+        if ((socket_recv_data(sock_cmd, buf, sizeof(buf))) == -1)
         {
             #ifdef DEBUG
             perror("recv cmd data error\n");
