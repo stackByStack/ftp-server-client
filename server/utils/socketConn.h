@@ -15,9 +15,13 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <pthread.h>
+#include "logger.h"
 
 #define DEBUG 1
 #define MAXSIZE 4096 // max buffer size
+
+extern Logger logger;
 
 /**
  * @brief Create a socket object, bind and listen
@@ -90,5 +94,14 @@ int socket_close(int sockfd);
  * @return -1 on error, 0 on success
  */
 int socket_get_ip(char *ip);
+
+/**
+ * @brief close data connection
+ * 
+ * @param sock_data data socket
+ * @param dataLinkEstablished flag to indicate if data connection is established
+ * @param mutex mutex to lock dataLinkEstablished
+*/
+void close_data_conn(int *sock_data, int *dataLinkEstablished, pthread_mutex_t *mutex);
 
 #endif

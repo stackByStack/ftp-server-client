@@ -202,3 +202,18 @@ int socket_get_ip(char *ip)
 
     return 0;
 }
+
+void close_data_conn(int *sock_data, int *dataLinkEstablished, pthread_mutex_t *mutex)
+{
+    pthread_mutex_lock(mutex);
+    if (*dataLinkEstablished == 1)
+    {
+        // Data link established, close the connection
+        int shut = shutdown(*sock_data, SHUT_RDWR);
+        logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, shutdown: %d\n", *sock_data, shut);
+        close(*sock_data);
+        *sock_data = -1;
+        *dataLinkEstablished = 0;
+    }
+    pthread_mutex_unlock(mutex);
+}

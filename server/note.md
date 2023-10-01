@@ -60,4 +60,4 @@ An encoded pathname is a string of bytes not containing \012. It normally repres
         {
             continue; // possibly break; also works.
         }
-- [ ]
+- [ ] socketConn.c Check whether each response ends with \r\n in send response functions.

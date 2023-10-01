@@ -209,3 +209,119 @@ void listen_pasv(void *args)
     pthread_mutex_unlock(mutex);
     
 }
+
+int retr_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex, int *passive_mode)
+{
+    pthread_mutex_lock(mutex);
+    if (*dataLinkEstablished == 0)
+    {
+        // Data link not established, show error message to client
+        char *msg = "Data link not established. Please use PORT or PASV command first.\n";
+        socket_send_response(sock_cmd, 425, msg);
+        pthread_mutex_unlock(mutex);
+        return 1;
+    }
+    pthread_mutex_unlock(mutex);
+    
+
+    // Data link established, show success message to client
+    char msg[100];
+    sprintf(msg, "RETR command successful. Downloading %s\n", arg);
+    socket_send_response(sock_cmd, 150, msg);
+
+    // Get the absolute path of the file to be downloaded
+    char path[MAXSIZE];
+    get_absolute_path(path, cwd, arg);
+
+    // Check if the file exists
+    if (access(path, F_OK) == -1)
+    {
+        // File does not exist, show error message to client
+        char msg[100];
+        sprintf(msg, "File %s does not exist.\n", arg);
+        socket_send_response(sock_cmd, 550, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, File %s does not exist.\n", sock_cmd, arg);
+        //close the data connection
+        close_data_conn(sock_data, dataLinkEstablished, mutex);
+        return 1;
+    }
+
+    // Check if the file is a directory
+    if (is_directory(path))
+    {
+        // File is a directory, show error message to client
+        char msg[100];
+        sprintf(msg, "%s is a directory.\n", arg);
+        socket_send_response(sock_cmd, 550, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, %s is a directory.\n", sock_cmd, arg);
+        //close the data connection
+        close_data_conn(sock_data, dataLinkEstablished, mutex);
+        return 1;
+    }
+
+    // Check if the file is readable
+    if (access(path, R_OK) == -1)
+    {
+        // File is not readable, show error message to client
+        char msg[100];
+        sprintf(msg, "File %s is not readable.\n", arg);
+        socket_send_response(sock_cmd, 550, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, File %s is not readable.\n", sock_cmd, arg);
+        //close the data connection
+        close_data_conn(sock_data, dataLinkEstablished, mutex);
+        return 1;
+    }
+
+    // Open the file
+    FILE *fp = fopen(path, "rb");
+    if (fp == NULL)
+    {
+        // Error occurred while opening the file, show error message to client
+        char msg[100];
+        sprintf(msg, "Error occurred while opening the file %s.\n", arg);
+        socket_send_response(sock_cmd, 551, msg);
+        return 1;
+    }
+
+    // The file can be large, thus it should be sent in multiple batches
+    // If the connection is broken in between, we need to send reject code 426 and tell how many bytes is already sent.
+    // If we successfully send the entire file, we need to send success code 226.
+    // If we encounter any other error when reading from file, we need to send reject code 551.
+
+    // Read and send the file in batches
+    char buffer[MAXSIZE];
+    size_t bytes_read;
+    int total_bytes_sent = 0;
+
+    while ((bytes_read = fread(buffer, 1, MAXSIZE, fp)) > 0)
+    {
+        if (socket_send_data(sock_data, buffer, bytes_read) < 0)
+        {
+            // Error occurred while sending data, show error message to client
+            char msg[100];
+            sprintf(msg, "Error occurred while sending the file %s.\n", arg);
+            socket_send_response(sock_cmd, 426, msg);
+            fclose(fp);
+            // Close the data connection
+            close_data_conn(sock_data, dataLinkEstablished, mutex);
+            return 1;
+        }
+        total_bytes_sent += bytes_read;
+        logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, bytes_sent: %d/%d\n", sock_cmd, total_bytes_sent, bytes_read);
+    }
+
+    // Close the file
+    fclose(fp);
+
+    // Send success message to client
+    char success_msg[100];
+    sprintf(success_msg, "File %s sent successfully. Total bytes sent: %d\n", arg, total_bytes_sent);
+    socket_send_response(sock_cmd, 226, success_msg);
+
+    // Close the data connection
+    close_data_conn(sock_data, dataLinkEstablished, mutex);
+
+    return 0;
+
+}
+

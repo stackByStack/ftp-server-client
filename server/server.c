@@ -218,8 +218,10 @@ void ftp_session(void *arg)
     char buf[MAXSIZE];
     char cmd[MAXSIZE] = {0};
     char arg[MAXSIZE] = {0};
-    char cwd[MAXSIZE] = "/";
+    char cwd[MAXSIZE] = {0};
     char path[MAXSIZE] = {0};
+
+    get_absolute_path(cwd, rootWorkDir, "/");
 
     while(1) 
     {
@@ -350,7 +352,20 @@ void process_command(void *args)
             return;
         }
     }
-    
+    // else if cmd is RETR, we need to send a file
+    else if(strncmp(cmd, "RETR", 4) == 0)
+    {
+        if(retr_process(sock_cmd, sock_data, arg, cwd, rootWorkDir, dataLinkEstablished, mutex_data, passive_mode) != 0)
+        {
+            logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, RETR command failed.\n", sock_cmd);
+            return;
+        }
+        else 
+        {
+            logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, RETR command successful.\n", sock_cmd);
+            return;
+        }
+    }
 
     
 

@@ -4,5 +4,6 @@
 #include "socketConn.h"
 #include "threadPool.h"
 #include "logger.h"
+#include "fileSystem.h"
 
 #endif
