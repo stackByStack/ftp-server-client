@@ -439,9 +439,20 @@ void process_command(void *args)
             return;
         }
     }
-
-    
-
+    // else if cmd is LIST, we need to list the files in the current working directory
+    else if(strncmp(cmd, "LIST", 4) == 0)
+    {
+        if(list_process(sock_cmd, sock_data, arg, cwd, rootWorkDir, dataLinkEstablished, mutex_data, passive_mode) != 0)
+        {
+            logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, LIST command failed.\n", sock_cmd);
+            return;
+        }
+        else 
+        {
+            logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, LIST command successful.\n", sock_cmd);
+            return;
+        }
+    }
 
 
 

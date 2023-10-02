@@ -500,7 +500,7 @@ int type_process(int sock_cmd, char *arg, int *transfer_type)
     }
 }
 
-int pwd_process(int sock_cmd, char *cwd, char* rootWorkDir)
+int pwd_process(int sock_cmd, char *cwd, char *rootWorkDir)
 {
     // send the response of accepting the message to client
     char msg[MAXSIZE];
@@ -557,5 +557,166 @@ int cwd_process(int sock_cmd, char *arg, char *cwd, char *rootWorkDir)
     sprintf(successMsg, "Directory changed to %s\r\n", arg);
     socket_send_response(sock_cmd, 250, successMsg);
     logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, Directory changed to %s\n", sock_cmd, arg);
+    return 0;
+}
+
+int list_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex, int *passive_mode)
+{
+    pthread_mutex_lock(mutex);
+    if (*dataLinkEstablished == 0)
+    {
+        // Data link not established, show error message to client
+        char *msg = "Data link not established. Please use PORT or PASV command first.\r\n";
+        socket_send_response(sock_cmd, 425, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Data link not established. Please use PORT or PASV command first.\n", sock_cmd);
+        pthread_mutex_unlock(mutex);
+        return 1;
+    }
+    pthread_mutex_unlock(mutex);
+
+    // Data link established, show success message to client
+    char msg[100];
+    sprintf(msg, "LIST command successful. Listing %s\r\n", arg);
+    socket_send_response(sock_cmd, 150, msg);
+
+    // Get the absolute path of the directory to be listed
+    char path[MAXSIZE];
+    get_absolute_path(path, cwd, rootWorkDir, arg);
+
+    // Check if the directory exists
+    if (access(path, F_OK) == -1)
+    {
+        // Directory does not exist, show error message to client
+        char msg[100];
+        sprintf(msg, "Directory %s does not exist.\r\n", arg);
+        socket_send_response(sock_cmd, 550, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Directory %s does not exist.\n", sock_cmd, arg);
+        // close the data connection
+        close_data_conn(sock_data, dataLinkEstablished, mutex);
+        return 1;
+    }
+
+    // Check if the directory is a file
+    if (!is_directory(path))
+    {
+        // File is a regular file, show file information to client
+        struct stat file_stat;
+        if (stat(path, &file_stat) == 0)
+        {
+            // Prepare the file information in the desired format (EPLF)
+            char file_info[MAXSIZE];
+            sprintf(file_info, "+i%s\r\n", arg);
+
+            // Send the file information over the data connection
+            socket_send_data(*sock_data, file_info, strlen(file_info));
+        }
+        else
+        {
+            // Failed to retrieve file information, show error message to client
+            char msg[100];
+            sprintf(msg, "Failed to retrieve file information for %s.\r\n", arg);
+            socket_send_response(sock_cmd, 451, msg);
+            logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Failed to retrieve file information for %s.\n", sock_cmd, arg);
+            // close the data connection
+            close_data_conn(sock_data, dataLinkEstablished, mutex);
+            return 1;
+        }
+
+        // Show success message to client
+        socket_send_response(sock_cmd, 226, "File information provided.\r\n");
+
+        // Close the data connection
+        close_data_conn(sock_data, dataLinkEstablished, mutex);
+
+        return 0;
+    }
+
+    // Check if the directory is readable
+    if (access(path, R_OK) == -1)
+    {
+        // Directory is not readable, show error message to client
+        char msg[100];
+        sprintf(msg, "Cannot read directory %s.\r\n", arg);
+        socket_send_response(sock_cmd, 550, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Cannot read directory %s.\n", sock_cmd, arg);
+        // close the data connection
+        close_data_conn(sock_data, dataLinkEstablished, mutex);
+        return 1;
+    }
+
+    // Open the directory for listing
+    DIR *dir = opendir(path);
+    if (dir == NULL)
+    {
+        // Failed to open directory, show error message to client
+        char msg[100];
+        sprintf(msg, "Failed to open directory %s.\r\n", arg);
+        socket_send_response(sock_cmd, 451, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Failed to open directory %s.\n", sock_cmd, arg);
+        // close the data connection
+        close_data_conn(sock_data, dataLinkEstablished, mutex);
+        return 1;
+    }
+
+    // Loop through directory entries and send them over the data connection
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL)
+    {
+        // Get the entry name
+        char *entry_name = entry->d_name;
+
+        // Prepare the entry information in the desired format (EPLF)
+        char entry_info[MAXSIZE];
+        sprintf(entry_info, "+i%s\t", entry_name);
+
+        // Get file information
+        struct stat file_stat;
+        char file_path[MAXSIZE];
+        sprintf(file_path, "%s/%s", path, entry_name);
+        if (stat(file_path, &file_stat) == 0)
+        {
+            // Append the "s" (file size) fact
+            if (S_ISREG(file_stat.st_mode))
+            {
+                sprintf(entry_info + strlen(entry_info), "s%lld,", (long long)file_stat.st_size);
+            }
+
+            // Append the "m" (last modified time) fact
+            time_t modified_time = file_stat.st_mtime;
+            time_t current_time = time(NULL);
+            if (S_ISREG(file_stat.st_mode) && difftime(current_time, modified_time) >= 60)
+            {
+                sprintf(entry_info + strlen(entry_info), "m%lld,", (long long)modified_time);
+            }
+
+            // Append the "r" (RETR) fact if it's a file
+            if (S_ISREG(file_stat.st_mode))
+            {
+                sprintf(entry_info + strlen(entry_info), "r,");
+            }
+
+            // Append the "/" (CWD) fact if it's a directory
+            if (S_ISDIR(file_stat.st_mode))
+            {
+                sprintf(entry_info + strlen(entry_info), "/,");
+            }
+        }
+
+        // Append the terminating characters
+        strcat(entry_info, "\015\012");
+
+        // Send the entry information over the data connection
+        socket_send_data(*sock_data, entry_info, strlen(entry_info));
+    }
+
+    // Close the directory
+    closedir(dir);
+
+    // Show success message to client
+    socket_send_response(sock_cmd, 226, "Directory listing completed.\r\n");
+
+    // Close the data connection
+    close_data_conn(sock_data, dataLinkEstablished, mutex);
+
     return 0;
 }
