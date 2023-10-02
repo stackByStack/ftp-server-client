@@ -720,3 +720,173 @@ int list_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootW
 
     return 0;
 }
+
+int mkd_process(int sock_cmd, char *arg, char *cwd, char *rootWorkDir)
+{
+    // Get the absolute path of the directory to be created
+    char path[MAXSIZE];
+    get_absolute_path(path, cwd, rootWorkDir, arg);
+
+    // Check if the directory already exists
+    if (access(path, F_OK) != -1)
+    {
+        // Directory already exists, show error message to client
+        char msg[100];
+        sprintf(msg, "Directory %s already exists.\r\n", arg);
+        socket_send_response(sock_cmd, 550, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Directory %s already exists.\n", sock_cmd, arg);
+        return 1;
+    }
+
+    // Check if the parent directory is writable
+    char parent_path[MAXSIZE];
+    get_absolute_path(parent_path, cwd, rootWorkDir, "");
+    if (access(parent_path, W_OK) == -1)
+    {
+        // Parent directory is not writable, show error message to client
+        char msg[100];
+        sprintf(msg, "Parent directory %s is not writable.\r\n", parent_path);
+        socket_send_response(sock_cmd, 550, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Parent directory %s is not writable.\n", sock_cmd, parent_path);
+        return 1;
+    }
+
+    // Create the directory
+    if (mkdir(path, 0777) == -1)
+    {
+        // Failed to create directory, show error message to client
+        char msg[100];
+        sprintf(msg, "Failed to create directory %s.\r\n", arg);
+        socket_send_response(sock_cmd, 550, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Failed to create directory %s.\n", sock_cmd, arg);
+        return 1;
+    }
+
+    // Show success message to client
+    char successMsg[100];
+    sprintf(successMsg, "Directory %s created successfully.\r\n", arg);
+    socket_send_response(sock_cmd, 226, successMsg);
+    logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, Directory %s created successfully.\n", sock_cmd, arg);
+    return 0;
+}
+
+int rmd_process(int sock_cmd, char *arg, char *cwd, char *rootWorkDir)
+{
+    // Get the absolute path of the directory to be removed
+    char path[MAXSIZE];
+    get_absolute_path(path, cwd, rootWorkDir, arg);
+
+    // Check if the directory exists
+    if (access(path, F_OK) == -1)
+    {
+        // Directory doesn't exist, show error message to client
+        char msg[100];
+        sprintf(msg, "Directory %s does not exist.\r\n", arg);
+        socket_send_response(sock_cmd, 550, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Directory %s does not exist.\n", sock_cmd, arg);
+        return 1;
+    }
+
+    // Check if the directory is writable
+    if (access(path, W_OK) == -1)
+    {
+        // Directory is not writable, show error message to client
+        char msg[100];
+        sprintf(msg, "Directory %s is not writable.\r\n", arg);
+        socket_send_response(sock_cmd, 550, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Directory %s is not writable.\n", sock_cmd, arg);
+        return 1;
+    }
+
+    // Remove the directory
+    if (rmdir(path) == -1)
+    {
+        // Failed to remove directory, show error message to client
+        char msg[100];
+        sprintf(msg, "Failed to remove directory %s.\r\n", arg);
+        socket_send_response(sock_cmd, 550, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Failed to remove directory %s.\n", sock_cmd, arg);
+        return 1;
+    }
+
+    // Show success message to client
+    char successMsg[100];
+    sprintf(successMsg, "Directory %s removed successfully.\r\n", arg);
+    socket_send_response(sock_cmd, 226, successMsg);
+    logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, Directory %s removed successfully.\n", sock_cmd, arg);
+    return 0;
+}
+
+int rnfr_process(int sock_cmd, char *arg, char *cwd, char *rootWorkDir, char *oldname)
+{
+    // Get the absolute path of the file/directory to be renamed
+    char old_path[MAXSIZE];
+    get_absolute_path(old_path, cwd, rootWorkDir, arg);
+
+    // Check if the file/directory exists
+    if (access(old_path, F_OK) == -1)
+    {
+        // File/directory doesn't exist, show error message to client
+        char msg[100];
+        sprintf(msg, "File/directory %s does not exist.\r\n", arg);
+        socket_send_response(sock_cmd, 550, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, File/directory %s does not exist.\n", sock_cmd, arg);
+        return 1;
+    }
+
+    // Save the old name to the corresponding address
+    strcpy(oldname, arg);
+
+    // Send success message to client
+    socket_send_response(sock_cmd, 350, "RNFR command successful.\r\n");
+    logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, RNFR command successful.\n", sock_cmd);
+
+    return 0;
+}
+
+int rnto_process(int sock_cmd, char *arg, char *cwd, char *rootWorkDir, char *oldName, int *rnfr_flag)
+{
+    // Check if the RNFR command was previously executed
+    if (*rnfr_flag == 0)
+    {
+        // RNFR command was not executed, show error message to client
+        socket_send_response(sock_cmd, 503, "RNFR must be executed before RNTO.\r\n");
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, RNFR must be executed before RNTO.\n", sock_cmd);
+        return 1;
+    }
+
+    // Get the absolute path of the new file/directory name
+    char new_path[MAXSIZE];
+    get_absolute_path(new_path, cwd, rootWorkDir, arg);
+
+    // Check if the new name conflicts with an existing file/directory
+    if (access(new_path, F_OK) != -1)
+    {
+        // New name conflicts with an existing file/directory, show error message to client
+        char msg[100];
+        sprintf(msg, "File/directory %s already exists.\r\n", arg);
+        socket_send_response(sock_cmd, 550, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, File/directory %s already exists.\n", sock_cmd, arg);
+        return 1;
+    }
+
+    // Perform the renaming operation
+    if (rename(oldName, new_path) == -1)
+    {
+        // Failed to rename, show error message to client
+        char msg[100];
+        sprintf(msg, "Failed to rename file/directory.\r\n");
+        socket_send_response(sock_cmd, 550, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Failed to rename file/directory.\n", sock_cmd);
+        return 1;
+    }
+
+    // Send success message to client
+    socket_send_response(sock_cmd, 250, "RNTO command successful.\r\n");
+    logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, RNTO command successful. File/directory renamed.\n", sock_cmd);
+
+    // Reset the RNFR flag
+    *rnfr_flag = 0;
+
+    return 0;
+}

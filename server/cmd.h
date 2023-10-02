@@ -129,4 +129,49 @@ int cwd_process(int sock_cmd, char *arg, char *cwd, char *rootWorkDir);
 */
 int list_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex, int *passive_mode);
 
+/**
+ * @brief Process the MKD command
+ * 
+ * @param sock_cmd Socket for the command channel
+ * @param arg Argument of the command
+ * @param cwd The current working directory of the client
+ * @param rootWorkDir The root working directory of the server
+ * @return int Returns 0 if the command was successful, -1 otherwise
+*/
+int mkd_process(int sock_cmd, char *arg, char *cwd, char *rootWorkDir);
+
+/**
+ * @brief Process the RMD command
+ * 
+ * @param sock_cmd Socket for the command channel
+ * @param arg Argument of the command
+ * @param cwd The current working directory of the client
+ * @param rootWorkDir The root working directory of the server
+ * @return int Returns 0 if the command was successful, -1 otherwise
+*/
+int rmd_process(int sock_cmd, char *arg, char *cwd, char *rootWorkDir);
+
+/**
+ * @brief Process the RNFR command
+ * 
+ * @param sock_cmd Socket for the command channel
+ * @param arg Argument of the command
+ * @param cwd The current working directory of the client
+ * @param rootWorkDir The root working directory of the server
+ * @param oldName The old name of the file
+*/
+int rnfr_process(int sock_cmd, char *arg, char *cwd, char *rootWorkDir, char *oldName);
+
+/**
+ * @brief Process the RNTO command
+ * 
+ * @param sock_cmd Socket for the command channel
+ * @param arg Argument of the command
+ * @param cwd The current working directory of the client
+ * @param rootWorkDir The root working directory of the server
+ * @param oldName The old name of the file
+ * @param rnfr_flag Flag to check if the RNFR command was executed
+*/
+int rnto_process(int sock_cmd, char *arg, char *cwd, char *rootWorkDir, char *oldName, int *rnfr_flag);
+
 #endif

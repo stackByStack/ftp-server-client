@@ -221,6 +221,8 @@ void ftp_session(void *arg)
     char arg[MAXSIZE] = {0};
     char cwd[MAXSIZE] = "/";
     char path[MAXSIZE] = {0};
+    char rnfr_old_path[MAXSIZE] = {0};
+    int rnfr_flag = 0;
 
     // get_absolute_path(cwd, rootWorkDir, "");
 
@@ -257,6 +259,8 @@ void ftp_session(void *arg)
         arg->mutex_data = &mutex_data;
         arg->passive_mode = &passive_mode;
         arg->transfer_type = &transfer_type;
+        arg->rnfr_flag = &rnfr_flag;
+        arg->rnfr_old_path = rnfr_old_path;
         strcpy(arg->cmd, cmd);
         strcpy(arg->arg, arg);
         strcpy(arg->cwd, cwd);
@@ -317,6 +321,8 @@ void process_command(void *args)
     int *sock_data = argp->sock_data;
     int *passive_mode = argp->passive_mode;
     int *transfer_type = argp->transfer_type;
+    char *rnfr_old_path = argp->rnfr_old_path;
+    int *rnfr_flag = argp->rnfr_flag;
     pthread_mutex_t *mutex_data = argp->mutex_data;
 
     //check the command whether is null
@@ -453,8 +459,72 @@ void process_command(void *args)
             return;
         }
     }
+    // else if cmd is MKD, we need to create a directory
+    else if(strncmp(cmd, "MKD", 3) == 0)
+    {
+        if(mkd_process(sock_cmd, arg, cwd, rootWorkDir) != 0)
+        {
+            logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, MKD command failed.\n", sock_cmd);
+            return;
+        }
+        else 
+        {
+            logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, MKD command successful.\n", sock_cmd);
+            return;
+        }
+    }
+    // else if cmd is RMD, we need to remove a directory
+    else if(strncmp(cmd, "RMD", 3) == 0)
+    {
+        if(rmd_process(sock_cmd, arg, cwd, rootWorkDir) != 0)
+        {
+            logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, RMD command failed.\n", sock_cmd);
+            return;
+        }
+        else 
+        {
+            logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, RMD command successful.\n", sock_cmd);
+            return;
+        }
+    }
+    // else if cmd is RNFR, we need to rename a file
+    else if(strncmp(cmd, "RNFR", 4) == 0)
+    {
+        if(rnfr_process(sock_cmd, arg, cwd, rootWorkDir, rnfr_process) != 0)
+        {
+            logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, RNFR command failed.\n", sock_cmd);
+            return;
+        }
+        else 
+        {
+            *rnfr_flag = 1;
+            logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, RNFR command successful.\n", sock_cmd);
+            return;
+        }
+    }
+    // else if cmd is RNTO, we need to rename a file
+    else if(strncmp(cmd, "RNTO", 4) == 0)
+    {
+        if(rnto_process(sock_cmd, arg, cwd, rootWorkDir, rnfr_process, rnfr_flag) != 0)
+        {
+            logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, RNTO command failed.\n", sock_cmd);
+            return;
+        }
+        else 
+        {
+            *rnfr_flag = 0;
+            rnfr_old_path[0] = 0;
+            logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, RNTO command successful.\n", sock_cmd);
+            return;
+        }
+    }
 
 
+    if(*rnfr_flag == 1 && strncmp(cmd, "RNFR", 4) != 0)
+    {
+        *rnfr_flag = 0;
+        rnfr_old_path[0] = 0;
+    }
 
     free(argp);
 }

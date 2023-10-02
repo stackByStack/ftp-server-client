@@ -28,6 +28,8 @@ typedef struct process_command_arg
     pthread_mutex_t *mutex_data;
     int *passive_mode;
     int *transfer_type;
+    char *rnfr_old_path;
+    int *rnfr_flag;
 } process_command_arg;
 
 typedef struct listen_pasv_arg
