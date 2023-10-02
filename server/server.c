@@ -221,7 +221,7 @@ void ftp_session(void *arg)
     char cwd[MAXSIZE] = {0};
     char path[MAXSIZE] = {0};
 
-    get_absolute_path(cwd, rootWorkDir, "/");
+    get_absolute_path(cwd, rootWorkDir, "");
 
     while(1) 
     {
@@ -363,6 +363,20 @@ void process_command(void *args)
         else 
         {
             logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, RETR command successful.\n", sock_cmd);
+            return;
+        }
+    }
+    // else if cmd is STOR, we need to receive a file
+    else if(strncmp(cmd, "STOR", 4) == 0)
+    {
+        if(stor_process(sock_cmd, sock_data, arg, cwd, rootWorkDir, dataLinkEstablished, mutex_data, passive_mode) != 0)
+        {
+            logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, STOR command failed.\n", sock_cmd);
+            return;
+        }
+        else 
+        {
+            logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, STOR command successful.\n", sock_cmd);
             return;
         }
     }

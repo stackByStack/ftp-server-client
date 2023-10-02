@@ -65,6 +65,7 @@ int port_process(int sock_cmd, int *sock_data, char *arg, int *dataLinkEstablish
     char msg[100];
     sprintf(msg, "PORT command successful. Connecting to %s:%d\n", ip, port_num);
     socket_send_response(sock_cmd, 200, msg);
+    logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, PORT command successful. Connecting to %s:%d\n", sock_cmd, ip, port_num);
 
     pthread_mutex_lock(mutex);
     int shut = shutdown(*sock_data, SHUT_RDWR); // Shutdown the previous connection
@@ -84,6 +85,7 @@ int port_process(int sock_cmd, int *sock_data, char *arg, int *dataLinkEstablish
 
     *sock_data = new_sock_data; // Update sock_data with the new connection
     *dataLinkEstablished = 1;
+    logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, Data link established under PORT mode.\n", *sock_data);
     pthread_mutex_unlock(mutex);
     return 0;
 }
@@ -142,7 +144,7 @@ int pasv_process(int sock_cmd, int *sock_data, int *dataLinkEstablished, pthread
     }
 
     *sock_data = new_sock_data; // Update sock_data with the new connection
-    *dataLinkEstablished = 0; //Still listening for client to connect
+    *dataLinkEstablished = 0;   // Still listening for client to connect
     pthread_mutex_unlock(mutex);
 
     // ip format 127,0,0,1
@@ -160,8 +162,9 @@ int pasv_process(int sock_cmd, int *sock_data, int *dataLinkEstablished, pthread
 
     // send the response of accepting the message to client
     socket_send_response(sock_cmd, 227, msg);
+    logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, Entering Passive Mode (%s,%d,%d)\n", sock_cmd, ip_formatted, port_num / 256, port_num % 256);
 
-    //submit the task of listening to the client to the thread pool
+    // submit the task of listening to the client to the thread pool
     listen_pasv_arg *arg = (listen_pasv_arg *)malloc(sizeof(listen_pasv_arg));
     arg->sock_data = sock_data;
     arg->dataLinkEstablished = dataLinkEstablished;
@@ -182,11 +185,13 @@ void listen_pasv(void *args)
     pthread_mutex_t *mutex = arg->mutex;
 
     pthread_mutex_lock(mutex);
-    if(*dataLinkEstablished == 1)
+    if (*dataLinkEstablished == 1)
     {
         pthread_mutex_unlock(mutex);
+        logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, listen_pasv: Data link already established. Not listening for new connections.\n", *sock_data);
         return;
     }
+    pthread_mutex_unlock(mutex);
 
     int new_sock_data = socket_accept(sock_data);
     if (new_sock_data < 0)
@@ -195,19 +200,20 @@ void listen_pasv(void *args)
     }
 
     pthread_mutex_lock(mutex);
-    if(*dataLinkEstablished == 1)
+    if (*dataLinkEstablished == 1)
     {
         // Data link already established, close the new connection
         close(new_sock_data);
+        logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, listen_pasv: Though new link established, Data link already established during the creating . Not listening for new connections.\n", *sock_data);
     }
     else
     {
         // Data link not established, update sock_data with the new connection
         *dataLinkEstablished = 1;
         *sock_data = new_sock_data;
+        logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, listen_pasv: Data link established.\n", *sock_data);
     }
     pthread_mutex_unlock(mutex);
-    
 }
 
 int retr_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex, int *passive_mode)
@@ -218,11 +224,11 @@ int retr_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootW
         // Data link not established, show error message to client
         char *msg = "Data link not established. Please use PORT or PASV command first.\n";
         socket_send_response(sock_cmd, 425, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Data link not established. Please use PORT or PASV command first.\n", sock_cmd);
         pthread_mutex_unlock(mutex);
         return 1;
     }
     pthread_mutex_unlock(mutex);
-    
 
     // Data link established, show success message to client
     char msg[100];
@@ -241,7 +247,7 @@ int retr_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootW
         sprintf(msg, "File %s does not exist.\n", arg);
         socket_send_response(sock_cmd, 550, msg);
         logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, File %s does not exist.\n", sock_cmd, arg);
-        //close the data connection
+        // close the data connection
         close_data_conn(sock_data, dataLinkEstablished, mutex);
         return 1;
     }
@@ -254,7 +260,7 @@ int retr_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootW
         sprintf(msg, "%s is a directory.\n", arg);
         socket_send_response(sock_cmd, 550, msg);
         logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, %s is a directory.\n", sock_cmd, arg);
-        //close the data connection
+        // close the data connection
         close_data_conn(sock_data, dataLinkEstablished, mutex);
         return 1;
     }
@@ -267,7 +273,7 @@ int retr_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootW
         sprintf(msg, "File %s is not readable.\n", arg);
         socket_send_response(sock_cmd, 550, msg);
         logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, File %s is not readable.\n", sock_cmd, arg);
-        //close the data connection
+        // close the data connection
         close_data_conn(sock_data, dataLinkEstablished, mutex);
         return 1;
     }
@@ -280,6 +286,7 @@ int retr_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootW
         char msg[100];
         sprintf(msg, "Error occurred while opening the file %s.\n", arg);
         socket_send_response(sock_cmd, 551, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Error occurred while opening the file %s.\n", sock_cmd, arg);
         return 1;
     }
 
@@ -301,6 +308,7 @@ int retr_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootW
             char msg[100];
             sprintf(msg, "Error occurred while sending the file %s.\n", arg);
             socket_send_response(sock_cmd, 426, msg);
+            logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Error occurred while sending the file %s.\n", sock_cmd, arg);
             fclose(fp);
             // Close the data connection
             close_data_conn(sock_data, dataLinkEstablished, mutex);
@@ -317,11 +325,137 @@ int retr_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootW
     char success_msg[100];
     sprintf(success_msg, "File %s sent successfully. Total bytes sent: %d\n", arg, total_bytes_sent);
     socket_send_response(sock_cmd, 226, success_msg);
+    logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, File %s sent successfully. Total bytes sent: %d\n", sock_cmd, arg, total_bytes_sent);
+    // Close the data connection
+    close_data_conn(sock_data, dataLinkEstablished, mutex);
+
+    return 0;
+}
+
+int stor_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex, int *passive_mode)
+{
+    pthread_mutex_lock(mutex);
+    if (*dataLinkEstablished == 0)
+    {
+        // Data link not established, show error message to client
+        char *msg = "Data link not established. Please use PORT or PASV command first.\n";
+        socket_send_response(sock_cmd, 425, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Data link not established. Please use PORT or PASV command first.\n", sock_cmd);
+        pthread_mutex_unlock(mutex);
+        return 1;
+    }
+    pthread_mutex_unlock(mutex);
+
+    // Data link established, show success message to client
+    char msg[100];
+    sprintf(msg, "STOR command successful. Uploading %s\n", arg);
+    socket_send_response(sock_cmd, 150, msg);
+
+    // Get the absolute path of the file to be uploaded
+    char path[MAXSIZE];
+    get_absolute_path(path, cwd, arg);
+
+    // Check if the file exists
+    if (access(path, F_OK) != -1)
+    {
+        // File already exists, show error message to client
+        char msg[100];
+        sprintf(msg, "File %s already exists.\n", arg);
+        socket_send_response(sock_cmd, 550, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, File %s already exists.\n", sock_cmd, arg);
+        // close the data connection
+        close_data_conn(sock_data, dataLinkEstablished, mutex);
+        return 1;
+    }
+
+    // Check if the file is a directory
+    if (is_directory(path))
+    {
+        // File is a directory, show error message to client
+        char msg[100];
+        sprintf(msg, "%s is a directory.\n", arg);
+        socket_send_response(sock_cmd, 550, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, %s is a directory.\n", sock_cmd, arg);
+        // close the data connection
+        close_data_conn(sock_data, dataLinkEstablished, mutex);
+        return 1;
+    }
+
+    // Check if the file is writable
+    if (access(path, W_OK) == -1)
+    {
+        // File is not writable, show error message to client
+        char msg[100];
+        sprintf(msg, "File %s is not writable.\n", arg);
+        socket_send_response(sock_cmd, 550, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, File %s is not writable.\n", sock_cmd, arg);
+        // Close the data connection
+        close_data_conn(sock_data, dataLinkEstablished, mutex);
+        return 1;
+    }
+
+    // Open the file for writing
+    FILE *file = fopen(path, "wb");
+    if (file == NULL)
+    {
+        // Error opening the file, show error message to client
+        char msg[100];
+        sprintf(msg, "Failed to open file %s for writing.\n", arg);
+        socket_send_response(sock_cmd, 550, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Failed to open file %s for writing.\n", sock_cmd, arg);
+        // Close the data connection
+        close_data_conn(sock_data, dataLinkEstablished, mutex);
+        return 1;
+    }
+
+    // Receive and write the data to the file
+    char buffer[MAXSIZE];
+    ssize_t bytesRead;
+    ssize_t bytesWritten = 0;
+    while ((bytesRead = recv(*sock_data, buffer, sizeof(buffer), 0)) > 0)
+    {
+        ssize_t itemsWritten = fwrite(buffer, 1, bytesRead, file);
+        if (itemsWritten != bytesRead)
+        {
+            // Error writing data, show error message to client
+            char msg[100];
+            sprintf(msg, "Error writing data for file %s.\n", arg);
+            socket_send_response(sock_cmd, 550, msg);
+            logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Error writing data for file %s.\n", sock_cmd, arg);
+            // Close the file and data connection
+            fclose(file);
+            close_data_conn(sock_data, dataLinkEstablished, mutex);
+            return 1;
+        }
+        bytesWritten += bytesRead;
+        logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, bytes_written: %d\n", sock_cmd, bytesWritten);
+    }
+
+    // Check for errors during the data transfer
+    if (bytesRead < 0)
+    {
+        // Error receiving data, show error message to client
+        char msg[100];
+        sprintf(msg, "Error receiving data for file %s.\n", arg);
+        socket_send_response(sock_cmd, 426, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Error receiving data for file %s.\n", sock_cmd, arg);
+        // Close the file and data connection
+        fclose(file);
+        close_data_conn(sock_data, dataLinkEstablished, mutex);
+        return 1;
+    }
+
+    // Close the file
+    fclose(file);
+
+    // File upload successful, show success message to client
+    char successMsg[100];
+    sprintf(successMsg, "File %s uploaded successfully.\n", arg);
+    socket_send_response(sock_cmd, 226, successMsg);
+    logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, File %s uploaded successfully.\n", sock_cmd, arg);
 
     // Close the data connection
     close_data_conn(sock_data, dataLinkEstablished, mutex);
 
     return 0;
-
 }
-
