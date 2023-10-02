@@ -98,7 +98,7 @@ int ftp_login(int sock_cmd, char *password)
         //if not
         if(strncmp(buf, "USER", 4) != 0)
         {
-            if(strncmp(buf, "QUIT", 4) == 0)
+            if(strncmp(buf, "QUIT", 4) == 0 || strncmp(buf, "ABOR", 4) == 0)
             {
                 socket_send_response(sock_cmd, 221, "Goodbye.\r\n");
                 logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, quit\n", sock_cmd);
@@ -139,7 +139,7 @@ int ftp_login(int sock_cmd, char *password)
         }
         if(strncmp(buf, "PASS", 4) != 0)
         {
-            if(strncmp(buf, "QUIT", 4) == 0)
+            if(strncmp(buf, "QUIT", 4) == 0 || strncmp(buf, "ABOR", 4) == 0)
             {
                 socket_send_response(sock_cmd, 221, "Goodbye.\r\n");
                 logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, quit\n", sock_cmd);
@@ -241,7 +241,7 @@ void ftp_session(void *arg)
         parse_command(sock_cmd, buf, cmd, arg);
 
         //check whether the command is QUIT
-        if(strncmp(cmd, "QUIT", 4) == 0)
+        if(strncmp(cmd, "QUIT", 4) == 0 || strncmp(cmd, "ABOR", 4) == 0)
         {
             socket_send_response(sock_cmd, 221, "Goodbye.\r\n");
             logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, quit\n", sock_cmd);
@@ -377,6 +377,20 @@ void process_command(void *args)
         else 
         {
             logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, STOR command successful.\n", sock_cmd);
+            return;
+        }
+    }
+    // else if cmd is SYST, we need to send the system information
+    else if(strncmp(cmd, "SYST", 4) == 0)
+    {
+        if(syst_process(sock_cmd) != 0)
+        {
+            logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, SYST command failed.\n", sock_cmd);
+            return;
+        }
+        else 
+        {
+            logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, SYST command successful.\n", sock_cmd);
             return;
         }
     }

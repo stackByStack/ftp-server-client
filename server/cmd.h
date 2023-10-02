@@ -73,4 +73,12 @@ int retr_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootW
 */
 int stor_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex, int *passive_mode);
 
+/**
+ * @brief Process the SYST command
+ * 
+ * @param sock_cmd Socket for the command channel
+ * 
+*/
+int syst_process(int sock_cmd);
+
 #endif
