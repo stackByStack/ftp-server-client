@@ -509,3 +509,53 @@ int pwd_process(int sock_cmd, char *cwd, char* rootWorkDir)
     logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, PWD command successful. Current working directory: %s\n", sock_cmd, cwd);
     return 0;
 }
+
+int cwd_process(int sock_cmd, char *arg, char *cwd, char *rootWorkDir)
+{
+    // Get the absolute path of the directory to be changed to
+    char path[MAXSIZE];
+    get_absolute_path(path, cwd, rootWorkDir, arg);
+
+    // Check if the directory exists
+    if (access(path, F_OK) == -1)
+    {
+        // Directory does not exist, show error message to client
+        char msg[100];
+        sprintf(msg, "Directory %s does not exist.\r\n", arg);
+        socket_send_response(sock_cmd, 550, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Directory %s does not exist.\n", sock_cmd, arg);
+        return 1;
+    }
+
+    // Check if the directory is a file
+    if (!is_directory(path))
+    {
+        // Directory is a file, show error message to client
+        char msg[100];
+        sprintf(msg, "%s is a file.\r\n", arg);
+        socket_send_response(sock_cmd, 550, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, %s is a file.\n", sock_cmd, arg);
+        return 1;
+    }
+
+    // Check if the directory is readable
+    if (access(path, R_OK) == -1)
+    {
+        // Directory is not readable, show error message to client
+        char msg[100];
+        sprintf(msg, "Directory %s is not readable.\r\n", arg);
+        socket_send_response(sock_cmd, 550, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Directory %s is not readable.\n", sock_cmd, arg);
+        return 1;
+    }
+
+    // Change the current working directory
+    strcpy(cwd, path);
+
+    // send the response of accepting the message to client
+    char successMsg[100];
+    sprintf(successMsg, "Directory changed to %s\r\n", arg);
+    socket_send_response(sock_cmd, 250, successMsg);
+    logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, Directory changed to %s\n", sock_cmd, arg);
+    return 0;
+}

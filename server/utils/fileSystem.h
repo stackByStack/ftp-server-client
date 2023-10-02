@@ -9,7 +9,7 @@
 #define MAX_PATH 4096
 
 /**
- * @brief Get the absolute path of a file
+ * @brief Get the absolute path of a file. Actual wd = rootWorkDir + cwd
  * 
  * @param absolute_path The absolute path of the file
  * @param cwd The current working directory
