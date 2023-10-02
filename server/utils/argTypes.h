@@ -27,6 +27,7 @@ typedef struct process_command_arg
     int *sock_data;
     pthread_mutex_t *mutex_data;
     int *passive_mode;
+    int *transfer_type;
 } process_command_arg;
 
 typedef struct listen_pasv_arg

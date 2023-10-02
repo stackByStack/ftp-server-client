@@ -81,4 +81,34 @@ int stor_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootW
 */
 int syst_process(int sock_cmd);
 
+/**
+ * @brief Process the TYPE command, now only process TYPE I.
+ * 
+ * @param sock_cmd Socket for the command channel
+ * @param arg Argument of the command
+ * @param transfer_type The transfer type of the data channel
+ * @return int Returns 0 if the command was successful, -1 otherwise
+*/
+int type_process(int sock_cmd, char *arg, int *transfer_type);
+
+/**
+ * @brief Process the PWD command
+ * 
+ * @param sock_cmd Socket for the command channel
+ * @param cwd The current working directory of the client
+ * @param rootWorkDir The root working directory of the server
+ * @return int Returns 0 if the command was successful, -1 otherwise
+*/
+int pwd_process(int sock_cmd, char *cwd, char* rootWorkDir);
+
+/**
+ * @brief Process the cwd command
+ * 
+ * @param sock_cmd Socket for the command channel
+ * @param arg Argument of the command
+ * @param cwd The current working directory of the client
+ * @param rootWorkDir The root working directory of the server
+*/
+int cwd_process(int sock_cmd, char *arg, char *cwd, char *rootWorkDir);
+
 #endif

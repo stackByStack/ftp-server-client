@@ -196,6 +196,7 @@ void ftp_session(void *arg)
     int passive_mode = 0; //flag to indicate whether the passive mode is on
     int sock_data; //socket descriptor of the data connection
     pthread_mutex_t mutex_data; //mutex for the data connection
+    int transfer_type = 1; //flag to indicate the transfer type
     //init mutex
     pthread_mutex_init(&mutex_data, NULL);
 
@@ -218,10 +219,10 @@ void ftp_session(void *arg)
     char buf[MAXSIZE];
     char cmd[MAXSIZE] = {0};
     char arg[MAXSIZE] = {0};
-    char cwd[MAXSIZE] = {0};
+    char cwd[MAXSIZE] = "/";
     char path[MAXSIZE] = {0};
 
-    get_absolute_path(cwd, rootWorkDir, "");
+    // get_absolute_path(cwd, rootWorkDir, "");
 
     while(1) 
     {
@@ -255,6 +256,7 @@ void ftp_session(void *arg)
         arg->sock_data = &sock_data;
         arg->mutex_data = &mutex_data;
         arg->passive_mode = &passive_mode;
+        arg->transfer_type = &transfer_type;
         strcpy(arg->cmd, cmd);
         strcpy(arg->arg, arg);
         strcpy(arg->cwd, cwd);
@@ -314,6 +316,7 @@ void process_command(void *args)
     int *dataLinkEstablished = argp->dataLinkEstablished;
     int *sock_data = argp->sock_data;
     int *passive_mode = argp->passive_mode;
+    int *transfer_type = argp->transfer_type;
     pthread_mutex_t *mutex_data = argp->mutex_data;
 
     //check the command whether is null
@@ -391,6 +394,48 @@ void process_command(void *args)
         else 
         {
             logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, SYST command successful.\n", sock_cmd);
+            return;
+        }
+    }
+    // else if cmd is TYPE, we need to set the transfer type
+    else if(strncmp(cmd, "TYPE", 4) == 0)
+    {
+        if(type_process(sock_cmd, arg, transfer_type) != 0)
+        {
+            logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, TYPE command failed.\n", sock_cmd);
+            return;
+        }
+        else 
+        {
+            logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, TYPE command successful.\n", sock_cmd);
+            return;
+        }
+    }
+    // else if cmd is PWD, we need to send the current working directory
+    else if(strncmp(cmd, "PWD", 3) == 0)
+    {
+        if(pwd_process(sock_cmd, cwd, rootWorkDir) != 0)
+        {
+            logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, PWD command failed.\n", sock_cmd);
+            return;
+        }
+        else 
+        {
+            logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, PWD command successful.\n", sock_cmd);
+            return;
+        }
+    }
+    // else if cmd is CWD, we need to change the current working directory
+    else if(strncmp(cmd, "CWD", 3) == 0)
+    {
+        if(cwd_process(sock_cmd, arg, cwd, rootWorkDir) != 0)
+        {
+            logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, CWD command failed.\n", sock_cmd);
+            return;
+        }
+        else 
+        {
+            logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, CWD command successful.\n", sock_cmd);
             return;
         }
     }

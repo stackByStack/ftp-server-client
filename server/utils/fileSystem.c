@@ -1,16 +1,11 @@
 #include "fileSystem.h"
 
-void get_absolute_path(char *absolute_path, const char *cwd, const char *filename)
+void get_absolute_path(char *absolute_path, const char *rootWorkDir, const char *cwd, const char *filename)
 {
-    // Check if the filename is an empty string
-    if (filename[0] == '\0')
-    {
-        // Copy cwd directly as the filename is empty
-        strncpy(absolute_path, cwd, MAX_PATH - 1);
-        absolute_path[MAX_PATH - 1] = '\0';  // Ensure null-termination
-        return;
-    }
-
+    // Copy rootWorkDir first
+    strncpy(absolute_path, rootWorkDir, MAX_PATH - 1);
+    absolute_path[MAX_PATH - 1] = '\0';  // Ensure null-termination
+    
     // Check if the filename is an absolute path
     if (filename[0] == '/')
     {
@@ -20,16 +15,32 @@ void get_absolute_path(char *absolute_path, const char *cwd, const char *filenam
         return;
     }
 
-    // Copy cwd first
-    strncpy(absolute_path, cwd, MAX_PATH - 1);
-    absolute_path[MAX_PATH - 1] = '\0';  // Ensure null-termination
+    
 
-    // Check if the cwd has a trailing slash
-    int cwd_len = strlen(cwd);
-    if (cwd[cwd_len - 1] != '/')
+    // Check if the rootWorkDir has a trailing slash
+    int rootWorkDirLen = strlen(rootWorkDir);
+    if (rootWorkDir[rootWorkDirLen - 1] != '/')
     {
-        // Append a slash to the cwd
-        strncat(absolute_path, "/", MAX_PATH - cwd_len - 1);
+        // Append a slash to the rootWorkDir
+        strncat(absolute_path, "/", MAX_PATH - rootWorkDirLen - 1);
+    }
+
+    // Check if the cwd is not empty
+    if (cwd[0] != '\0')
+    {
+        // Check if the cwd has a trailing slash
+        int cwdLen = strlen(cwd);
+        if (cwd[cwdLen - 1] != '/')
+        {
+            // Append a slash to the cwd
+            strncat(absolute_path, cwd, MAX_PATH - strlen(absolute_path) - 1);
+            strncat(absolute_path, "/", MAX_PATH - strlen(absolute_path) - 1);
+        }
+        else
+        {
+            // Append the cwd directly
+            strncat(absolute_path, cwd, MAX_PATH - strlen(absolute_path) - 1);
+        }
     }
 
     // Concatenate the filename to the absolute path

@@ -237,7 +237,7 @@ int retr_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootW
 
     // Get the absolute path of the file to be downloaded
     char path[MAXSIZE];
-    get_absolute_path(path, cwd, arg);
+    get_absolute_path(path, cwd, rootWorkDir, arg);
 
     // Check if the file exists
     if (access(path, F_OK) == -1)
@@ -353,7 +353,7 @@ int stor_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootW
 
     // Get the absolute path of the file to be uploaded
     char path[MAXSIZE];
-    get_absolute_path(path, cwd, arg);
+    get_absolute_path(path, cwd, rootWorkDir, arg);
 
     // Check if the file exists
     if (access(path, F_OK) != -1)
@@ -466,5 +466,46 @@ int syst_process(int sock_cmd)
     char *msg = "UNIX Type: L8\r\n";
     socket_send_response(sock_cmd, 215, msg);
     logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, SYST command successful.\n", sock_cmd);
+    return 0;
+}
+
+int type_process(int sock_cmd, char *arg, int *transfer_type)
+{
+    if (strcmp(arg, "I") == 0)
+    {
+        // send the response of accepting the message to client
+        char *msg = "Type set to I.\r\n";
+        socket_send_response(sock_cmd, 200, msg);
+        logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, Type set to I.\n", sock_cmd);
+        *transfer_type = 1;
+        return 0;
+    }
+    else if (strcmp(arg, "A") == 0)
+    {
+        // send the response of accepting the message to client
+        char *msg = "Type set to A.\r\n";
+        socket_send_response(sock_cmd, 200, msg);
+        logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, Type set to A.\n", sock_cmd);
+        *transfer_type = 0;
+        return 0;
+    }
+    else
+    {
+        // send error message to client with error code
+        char msg[100];
+        sprintf(msg, "Invalid type: %s. Expected type: I or A\r\n", arg);
+        socket_send_response(sock_cmd, 501, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Invalid type: %s. Expected type: I or A\n", sock_cmd, arg);
+        return 1;
+    }
+}
+
+int pwd_process(int sock_cmd, char *cwd, char* rootWorkDir)
+{
+    // send the response of accepting the message to client
+    char msg[MAXSIZE];
+    sprintf(msg, "\"%s\"\r\n", cwd);
+    socket_send_response(sock_cmd, 257, msg);
+    logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, PWD command successful. Current working directory: %s\n", sock_cmd, cwd);
     return 0;
 }
