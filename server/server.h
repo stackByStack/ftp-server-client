@@ -1,3 +1,5 @@
+#ifndef SERVER_H
+#define SERVER_H
 #include "utils/utils.h"
 #include "utils/argTypes.h"
 #include "cmd.h"
@@ -25,7 +27,7 @@ int ftp_login(int sock_cmd, char* password);
  * @param cmd The command sent by the client.
  * @param arg The argument of the command sent by the client.
 */
-int parse_command(int sock_cmd, char *buf, char *cmd, char *arg);
+void parse_command(int sock_cmd, char *buf, char *cmd, char *arg);
 
 /**
  * @brief This function is used to process the command sent by the client.
@@ -37,3 +39,5 @@ int parse_command(int sock_cmd, char *buf, char *cmd, char *arg);
  * @param rootWorkDir The root working directory of the server.
 */
 void process_command(void *args);
+
+#endif

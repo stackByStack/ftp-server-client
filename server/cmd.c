@@ -1,6 +1,14 @@
 #include "cmd.h"
 
-int port_process(int sock_cmd, int *sock_data, char *arg, int *dataLinkEstablished, pthread_mutex_t *mutex, int *passive_mode)
+int is_directory(const char *path) {
+    struct stat path_stat;
+    if (stat(path, &path_stat) == 0) {
+        return S_ISDIR(path_stat.st_mode);
+    }
+    return 0;  // Return 0 if stat fails or path is not a directory
+}
+
+int port_process(int sock_cmd, int *sock_data, char *arg, int *dataLinkEstablished, pthread_mutex_t *mutex)
 {
     int port[6];
     int i = 0;
@@ -150,7 +158,8 @@ int pasv_process(int sock_cmd, int *sock_data, int *dataLinkEstablished, pthread
     // ip format 127,0,0,1
     char ip_formatted[30];
     strcpy(ip_formatted, ip);
-    for (int i = 0; i < strlen(ip_formatted); i++)
+    int len = strlen(ip_formatted);
+    for (int i = 0; i < len; i++)
     {
         if (ip_formatted[i] == '.')
             ip_formatted[i] = ',';
@@ -169,7 +178,7 @@ int pasv_process(int sock_cmd, int *sock_data, int *dataLinkEstablished, pthread
     arg->sock_data = sock_data;
     arg->dataLinkEstablished = dataLinkEstablished;
     arg->passive_mode = passive_mode;
-    arg->pool = pool;
+    // arg->pool = pool;
     arg->mutex = mutex;
     submit_task(pool, listen_pasv, arg);
     return 0;
@@ -180,8 +189,8 @@ void listen_pasv(void *args)
     listen_pasv_arg *arg = (listen_pasv_arg *)args;
     int *sock_data = arg->sock_data;
     int *dataLinkEstablished = arg->dataLinkEstablished;
-    int *passive_mode = arg->passive_mode;
-    ThreadPool *pool = arg->pool;
+    // int *passive_mode = arg->passive_mode;
+    // ThreadPool *pool = arg->pool;
     pthread_mutex_t *mutex = arg->mutex;
 
     pthread_mutex_lock(mutex);
@@ -193,7 +202,7 @@ void listen_pasv(void *args)
     }
     pthread_mutex_unlock(mutex);
 
-    int new_sock_data = socket_accept(sock_data);
+    int new_sock_data = socket_accept(*sock_data);
     if (new_sock_data < 0)
     {
         logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, listen_pasv Error: cannot accept the client.\n", sock_data);
@@ -216,7 +225,7 @@ void listen_pasv(void *args)
     pthread_mutex_unlock(mutex);
 }
 
-int retr_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex, int *passive_mode)
+int retr_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex)
 {
     pthread_mutex_lock(mutex);
     if (*dataLinkEstablished == 0)
@@ -302,7 +311,7 @@ int retr_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootW
 
     while ((bytes_read = fread(buffer, 1, MAXSIZE, fp)) > 0)
     {
-        if (socket_send_data(sock_data, buffer, bytes_read) < 0)
+        if (socket_send_data(*sock_data, buffer, bytes_read) < 0)
         {
             // Error occurred while sending data, show error message to client
             char msg[100];
@@ -332,7 +341,7 @@ int retr_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootW
     return 0;
 }
 
-int stor_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex, int *passive_mode)
+int stor_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex)
 {
     pthread_mutex_lock(mutex);
     if (*dataLinkEstablished == 0)
@@ -500,7 +509,7 @@ int type_process(int sock_cmd, char *arg, int *transfer_type)
     }
 }
 
-int pwd_process(int sock_cmd, char *cwd, char *rootWorkDir)
+int pwd_process(int sock_cmd, char *cwd)
 {
     // send the response of accepting the message to client
     char msg[MAXSIZE];
@@ -560,7 +569,7 @@ int cwd_process(int sock_cmd, char *arg, char *cwd, char *rootWorkDir)
     return 0;
 }
 
-int list_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex, int *passive_mode)
+int list_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex)
 {
     pthread_mutex_lock(mutex);
     if (*dataLinkEstablished == 0)
@@ -671,7 +680,7 @@ int list_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootW
 
         // Get file information
         struct stat file_stat;
-        char file_path[MAXSIZE];
+        char file_path[MAXSIZE * 2];
         sprintf(file_path, "%s/%s", path, entry_name);
         if (stat(file_path, &file_stat) == 0)
         {
@@ -744,7 +753,7 @@ int mkd_process(int sock_cmd, char *arg, char *cwd, char *rootWorkDir)
     if (access(parent_path, W_OK) == -1)
     {
         // Parent directory is not writable, show error message to client
-        char msg[100];
+        char msg[MAXSIZE * 2];
         sprintf(msg, "Parent directory %s is not writable.\r\n", parent_path);
         socket_send_response(sock_cmd, 550, msg);
         logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Parent directory %s is not writable.\n", sock_cmd, parent_path);

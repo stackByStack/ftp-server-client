@@ -1,3 +1,5 @@
+#ifndef THREAD_POOL_H
+#define THREAD_POOL_H
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -5,12 +7,12 @@
 #define MAX_THREADS 10
 #define MAX_TASKS 100
 
-typedef struct {
+typedef struct Task {
     void (*task)(void* arg);
     void* arg;
 } Task;
 
-typedef struct {
+typedef struct  ThreadPool {
     Task* tasks[MAX_TASKS];
     int front;
     int rear;
@@ -76,3 +78,5 @@ void submit_task(ThreadPool* pool, void (*task)(void* arg), void* arg);
  * @param pool The thread pool
  */ 
 void shutdown_pool(ThreadPool* pool);
+
+#endif

@@ -218,9 +218,9 @@ void ftp_session(void *arg)
     // Now we have logged in, we can start to process the commands
     char buf[MAXSIZE];
     char cmd[MAXSIZE] = {0};
-    char arg[MAXSIZE] = {0};
+    char args[MAXSIZE] = {0};
     char cwd[MAXSIZE] = "/";
-    char path[MAXSIZE] = {0};
+    // char path[MAXSIZE] = {0};
     char rnfr_old_path[MAXSIZE] = {0};
     int rnfr_flag = 0;
 
@@ -241,7 +241,7 @@ void ftp_session(void *arg)
         logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, identity: %s, cmd: %s\n", sock_cmd, password, buf);
         
         // Parse the command
-        parse_command(sock_cmd, buf, cmd, arg);
+        parse_command(sock_cmd, buf, cmd, args);
 
         //check whether the command is QUIT
         if(strncmp(cmd, "QUIT", 4) == 0 || strncmp(cmd, "ABOR", 4) == 0)
@@ -252,20 +252,21 @@ void ftp_session(void *arg)
         }
         
         // send Process the command to thread pool
-        process_command_arg *arg = (process_command_arg *)malloc(sizeof(process_command_arg));
-        arg->sock_cmd = sock_cmd;
-        arg->dataLinkEstablished = &dataLinkEstablished;
-        arg->sock_data = &sock_data;
-        arg->mutex_data = &mutex_data;
-        arg->passive_mode = &passive_mode;
-        arg->transfer_type = &transfer_type;
-        arg->rnfr_flag = &rnfr_flag;
-        arg->rnfr_old_path = rnfr_old_path;
-        strcpy(arg->cmd, cmd);
-        strcpy(arg->arg, arg);
-        strcpy(arg->cwd, cwd);
-        strcpy(arg->rootWorkDir, rootWorkDir);
-        submit_task(pool, process_command, (void *)arg);
+        process_command_arg *arg1 = (process_command_arg *)malloc(sizeof(process_command_arg));
+        arg1->sock_cmd = sock_cmd;
+        arg1->dataLinkEstablished = &dataLinkEstablished;
+        arg1->sock_data = &sock_data;
+        arg1->mutex_data = &mutex_data;
+        arg1->passive_mode = &passive_mode;
+        arg1->transfer_type = &transfer_type;
+        arg1->rnfr_flag = &rnfr_flag;
+        arg1->rnfr_old_path = rnfr_old_path;
+        arg1->pool = pool;
+        strcpy(arg1->cmd, cmd);
+        strcpy(arg1->arg, args);
+        strcpy(arg1->cwd, cwd);
+        strcpy(arg1->rootWorkDir, rootWorkDir);
+        submit_task(pool, process_command, (void *)arg1);
         
     }
 
@@ -282,7 +283,7 @@ void ftp_session(void *arg)
     free(arg);
 }
 
-int parse_command(int socket_cmd, char *buf, char *cmd, char *arg)
+void parse_command(int socket_cmd, char *buf, char *cmd, char *arg)
 {
     // Parse the command
     int i = 0;
@@ -323,6 +324,7 @@ void process_command(void *args)
     int *transfer_type = argp->transfer_type;
     char *rnfr_old_path = argp->rnfr_old_path;
     int *rnfr_flag = argp->rnfr_flag;
+    ThreadPool *pool = argp->pool;
     pthread_mutex_t *mutex_data = argp->mutex_data;
 
     //check the command whether is null
@@ -336,7 +338,7 @@ void process_command(void *args)
     // if cmd is PORT, we need to establish a data connection
     if(strncmp(cmd, "PORT", 4) == 0)
     {
-        if(port_process(sock_cmd, sock_data, arg, dataLinkEstablished, mutex_data, passive_mode) != 0)
+        if(port_process(sock_cmd, sock_data, arg, dataLinkEstablished, mutex_data) != 0)
         {
             logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, PORT command failed.\n", sock_cmd);
             return;
@@ -350,7 +352,7 @@ void process_command(void *args)
     // else if cmd is PASV, we need to establish a data connection
     else if(strncmp(cmd, "PASV", 4) == 0)
     {
-        if(pasv_process(sock_cmd, sock_data, arg, dataLinkEstablished, mutex_data, passive_mode) != 0)
+        if(pasv_process(sock_cmd, sock_data, dataLinkEstablished, mutex_data, passive_mode, pool) != 0)
         {
             logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, PASV command failed.\n", sock_cmd);
             return;
@@ -364,7 +366,7 @@ void process_command(void *args)
     // else if cmd is RETR, we need to send a file
     else if(strncmp(cmd, "RETR", 4) == 0)
     {
-        if(retr_process(sock_cmd, sock_data, arg, cwd, rootWorkDir, dataLinkEstablished, mutex_data, passive_mode) != 0)
+        if(retr_process(sock_cmd, sock_data, arg, cwd, rootWorkDir, dataLinkEstablished, mutex_data) != 0)
         {
             logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, RETR command failed.\n", sock_cmd);
             return;
@@ -378,7 +380,7 @@ void process_command(void *args)
     // else if cmd is STOR, we need to receive a file
     else if(strncmp(cmd, "STOR", 4) == 0)
     {
-        if(stor_process(sock_cmd, sock_data, arg, cwd, rootWorkDir, dataLinkEstablished, mutex_data, passive_mode) != 0)
+        if(stor_process(sock_cmd, sock_data, arg, cwd, rootWorkDir, dataLinkEstablished, mutex_data) != 0)
         {
             logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, STOR command failed.\n", sock_cmd);
             return;
@@ -420,7 +422,7 @@ void process_command(void *args)
     // else if cmd is PWD, we need to send the current working directory
     else if(strncmp(cmd, "PWD", 3) == 0)
     {
-        if(pwd_process(sock_cmd, cwd, rootWorkDir) != 0)
+        if(pwd_process(sock_cmd, cwd) != 0)
         {
             logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, PWD command failed.\n", sock_cmd);
             return;
@@ -448,7 +450,7 @@ void process_command(void *args)
     // else if cmd is LIST, we need to list the files in the current working directory
     else if(strncmp(cmd, "LIST", 4) == 0)
     {
-        if(list_process(sock_cmd, sock_data, arg, cwd, rootWorkDir, dataLinkEstablished, mutex_data, passive_mode) != 0)
+        if(list_process(sock_cmd, sock_data, arg, cwd, rootWorkDir, dataLinkEstablished, mutex_data) != 0)
         {
             logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, LIST command failed.\n", sock_cmd);
             return;
@@ -490,7 +492,7 @@ void process_command(void *args)
     // else if cmd is RNFR, we need to rename a file
     else if(strncmp(cmd, "RNFR", 4) == 0)
     {
-        if(rnfr_process(sock_cmd, arg, cwd, rootWorkDir, rnfr_process) != 0)
+        if(rnfr_process(sock_cmd, arg, cwd, rootWorkDir, rnfr_old_path) != 0)
         {
             logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, RNFR command failed.\n", sock_cmd);
             return;
@@ -505,7 +507,7 @@ void process_command(void *args)
     // else if cmd is RNTO, we need to rename a file
     else if(strncmp(cmd, "RNTO", 4) == 0)
     {
-        if(rnto_process(sock_cmd, arg, cwd, rootWorkDir, rnfr_process, rnfr_flag) != 0)
+        if(rnto_process(sock_cmd, arg, cwd, rootWorkDir, rnfr_old_path, rnfr_flag) != 0)
         {
             logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, RNTO command failed.\n", sock_cmd);
             return;

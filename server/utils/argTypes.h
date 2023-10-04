@@ -30,6 +30,7 @@ typedef struct process_command_arg
     int *transfer_type;
     char *rnfr_old_path;
     int *rnfr_flag;
+    ThreadPool *pool;
 } process_command_arg;
 
 typedef struct listen_pasv_arg
@@ -37,8 +38,8 @@ typedef struct listen_pasv_arg
     int *sock_data;
     int *dataLinkEstablished; 
     int *passive_mode;
-    ThreadPool *pool;
-    pthread_mutex_t *mutex
+    // ThreadPool *pool;
+    pthread_mutex_t *mutex;
 } listen_pasv_arg;
 
 #endif

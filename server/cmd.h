@@ -17,10 +17,9 @@ extern Logger logger;
  * @param arg Argument of the command
  * @param dataLinkEstablished Flag to check if the data link is established
  * @param mutex Mutex to lock the data link established flag
- * @param passive_mode Flag to check if the server is in passive mode
  * @return int Returns 0 if the command was successful, -1 otherwise
 */
-int port_process(int sock_cmd, int *sock_data, char* arg, int *dataLinkEstablished, pthread_mutex_t *mutex, int *passive_mode);
+int port_process(int sock_cmd, int *sock_data, char* arg, int *dataLinkEstablished, pthread_mutex_t *mutex);
 
 /**
  * @brief Process the PASV command
@@ -56,10 +55,9 @@ void listen_pasv(void *args);
  * @param rootWorkDir The root working directory of the server
  * @param dataLinkEstablished Flag to check if the data link is established
  * @param mutex Mutex to lock the data link established flag
- * @param passive_mode Flag to check if the server is in passive mode
  * @return int Returns 0 if the command was successful, -1 otherwise 
 */
-int retr_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex, int *passive_mode);
+int retr_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex);
 
 /**
  * @brief Process the STOR command
@@ -71,10 +69,9 @@ int retr_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootW
  * @param rootWorkDir The root working directory of the server
  * @param dataLinkEstablished Flag to check if the data link is established
  * @param mutex Mutex to lock the data link established flag
- * @param passive_mode Flag to check if the server is in passive mode
  * @return int Returns 0 if the command was successful, -1 otherwise 
 */
-int stor_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex, int *passive_mode);
+int stor_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex);
 
 /**
  * @brief Process the SYST command
@@ -99,10 +96,9 @@ int type_process(int sock_cmd, char *arg, int *transfer_type);
  * 
  * @param sock_cmd Socket for the command channel
  * @param cwd The current working directory of the client
- * @param rootWorkDir The root working directory of the server
  * @return int Returns 0 if the command was successful, -1 otherwise
 */
-int pwd_process(int sock_cmd, char *cwd, char* rootWorkDir);
+int pwd_process(int sock_cmd, char *cwd);
 
 /**
  * @brief Process the cwd command
@@ -124,10 +120,9 @@ int cwd_process(int sock_cmd, char *arg, char *cwd, char *rootWorkDir);
  * @param rootWorkDir The root working directory of the server
  * @param dataLinkEstablished Flag to check if the data link is established
  * @param mutex Mutex to lock the data link established flag
- * @param passive_mode Flag to check if the server is in passive mode
  * @return int Returns 0 if the command was successful, -1 otherwise
 */
-int list_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex, int *passive_mode);
+int list_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex);
 
 /**
  * @brief Process the MKD command
@@ -173,5 +168,13 @@ int rnfr_process(int sock_cmd, char *arg, char *cwd, char *rootWorkDir, char *ol
  * @param rnfr_flag Flag to check if the RNFR command was executed
 */
 int rnto_process(int sock_cmd, char *arg, char *cwd, char *rootWorkDir, char *oldName, int *rnfr_flag);
+
+/**
+ * @brief Check if the path is a directory
+ * 
+ * @param path The path to be checked
+ * @return int Returns 1 if the path is a directory, 0 otherwise
+*/
+int is_directory(const char *path);
 
 #endif
