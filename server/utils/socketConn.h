@@ -18,7 +18,7 @@
 #include <pthread.h>
 #include "logger.h"
 
-#define DEBUG 1
+#define DEBUG 0
 #define MAXSIZE 4096 // max buffer size
 
 extern Logger logger;
