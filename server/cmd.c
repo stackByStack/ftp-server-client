@@ -263,6 +263,18 @@ int retr_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootW
         return 1;
     }
 
+    if (isUpperDirectory(path, rootWorkDir) == 1)
+    {
+        //access control
+        char msg[MAXSIZE * 2];
+        sprintf(msg, "File %s is not in the current working directory.\r\n", path);
+        socket_send_response(sock_cmd, 550, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, File %s is not in the current working directory.\n", sock_cmd, arg);
+        // close the data connection
+        close_data_conn(sock_data, dataLinkEstablished, mutex);
+        return 1;
+    }
+
     // Check if the file is a directory
     if (is_directory(path))
     {
@@ -374,6 +386,18 @@ int stor_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootW
         sprintf(msg, "File %s already exists.\r\n", arg);
         socket_send_response(sock_cmd, 550, msg);
         logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, File %s already exists.\n", sock_cmd, arg);
+        // close the data connection
+        close_data_conn(sock_data, dataLinkEstablished, mutex);
+        return 1;
+    }
+
+    if (isUpperDirectory(path, rootWorkDir) == 1)
+    {
+        //access control
+        char msg[MAXSIZE * 2];
+        sprintf(msg, "File %s is not in the current working directory.\r\n", path);
+        socket_send_response(sock_cmd, 550, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, File %s is not in the current working directory.\n", sock_cmd, arg);
         // close the data connection
         close_data_conn(sock_data, dataLinkEstablished, mutex);
         return 1;
@@ -538,6 +562,16 @@ int cwd_process(int sock_cmd, char *arg, char *cwd, char *rootWorkDir)
         return 1;
     }
 
+    if (isUpperDirectory(path, rootWorkDir) == 1)
+    {
+        //access control
+        char msg[MAXSIZE * 2];
+        sprintf(msg, "Directory %s is not in the current working directory.\r\n", path);
+        socket_send_response(sock_cmd, 550, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Directory %s is not in the current working directory.\n", sock_cmd, arg);
+        return 1;
+    }
+
     // Check if the directory is a file
     if (!is_directory(path))
     {
@@ -560,8 +594,9 @@ int cwd_process(int sock_cmd, char *arg, char *cwd, char *rootWorkDir)
         return 1;
     }
 
-    // Change the current working directory
-    strcpy(cwd, path);
+    // Change the current working directory by getting the part after rootworkDir
+    // strcpy(cwd, path);
+    strcpy(cwd, path + strlen(rootWorkDir));
 
     // send the response of accepting the message to client
     char successMsg[100];
@@ -607,6 +642,18 @@ int list_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootW
         return 1;
     }
 
+    if (isUpperDirectory(path, rootWorkDir) == 1)
+    {
+        //access control
+        char msg[MAXSIZE * 2];
+        sprintf(msg, "Directory %s is not in the current working directory.\r\n", path);
+        socket_send_response(sock_cmd, 550, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Directory %s is not in the current working directory.\n", sock_cmd, arg);
+        // close the data connection
+        close_data_conn(sock_data, dataLinkEstablished, mutex);
+        return 1;
+    }
+
     struct stat pathStat;
     if (stat(path, &pathStat) == 0) {
         if (S_ISDIR(pathStat.st_mode)) {
@@ -640,6 +687,16 @@ int mkd_process(int sock_cmd, char *arg, char *cwd, char *rootWorkDir)
         sprintf(msg, "Directory %s already exists.\r\n", arg);
         socket_send_response(sock_cmd, 550, msg);
         logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Directory %s already exists.\n", sock_cmd, arg);
+        return 1;
+    }
+
+    if (isUpperDirectory(path, rootWorkDir) == 1)
+    {
+        //access control
+        char msg[MAXSIZE * 2];
+        sprintf(msg, "Directory %s is not in the current working directory.\r\n", path);
+        socket_send_response(sock_cmd, 550, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Directory %s is not in the current working directory.\n", sock_cmd, arg);
         return 1;
     }
 
@@ -692,6 +749,15 @@ int rmd_process(int sock_cmd, char *arg, char *cwd, char *rootWorkDir)
         return 1;
     }
 
+    if(isUpperDirectory(path, rootWorkDir) == 1) {
+        //access control
+        char msg[MAXSIZE * 2];
+        sprintf(msg, "Directory %s is not in the current working directory.\r\n", path);
+        socket_send_response(sock_cmd, 550, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Directory %s is not in the current working directory.\n", sock_cmd, arg);
+        return 1;
+    }
+
     // Check if the directory is writable
     if (access(path, W_OK) == -1)
     {
@@ -739,6 +805,16 @@ int rnfr_process(int sock_cmd, char *arg, char *cwd, char *rootWorkDir, char *ol
         return 1;
     }
 
+    if (isUpperDirectory(old_path, rootWorkDir) == 1)
+    {
+        //access control
+        char msg[MAXSIZE * 2];
+        sprintf(msg, "File/directory %s is not in the current working directory.\r\n", old_path);
+        socket_send_response(sock_cmd, 550, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, File/directory %s is not in the current working directory.\n", sock_cmd, arg);
+        return 1;
+    }
+
     // Save the old name to the corresponding address
     strcpy(oldname, arg);
 
@@ -772,6 +848,18 @@ int rnto_process(int sock_cmd, char *arg, char *cwd, char *rootWorkDir, char *ol
         sprintf(msg, "File/directory %s already exists.\r\n", arg);
         socket_send_response(sock_cmd, 550, msg);
         logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, File/directory %s already exists.\n", sock_cmd, arg);
+        return 1;
+    }
+
+    if (isUpperDirectory(new_path, rootWorkDir) == 1)
+    {
+        //access control
+        char msg[MAXSIZE * 2];
+        sprintf(msg, "File/directory %s is not in the current working directory.\r\n", new_path);
+        socket_send_response(sock_cmd, 550, msg);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, File/directory %s is not in the current working directory.\n", sock_cmd, arg);
+        // Reset the RNFR flag
+        *rnfr_flag = 0;
         return 1;
     }
 

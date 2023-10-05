@@ -118,4 +118,38 @@ void printFileDetails(const char* path, struct stat fileStat, int sock_data, int
     socket_send_response(sock_cmd, 226, "Directory listing completed.\r\n");
 }
 
+int isUpperDirectory(const char* combinedPath, const char* rootWorkDir) {
 
+    char rootWorkDirCanonical[MAX_PATH];
+    realpath(rootWorkDir, rootWorkDirCanonical);
+
+    char combinedPathCanonical[MAX_PATH];
+    if (realpath(combinedPath, combinedPathCanonical) == NULL) {
+        // Failed to obtain the canonicalized path, handle error
+        return -1;
+    }
+
+    if (strlen(combinedPathCanonical) < strlen(rootWorkDirCanonical)) {
+        // The combined path is shorter than the rootWorkDir, so it is at the parent or upper directory of rootWorkDir
+        return 1;
+    }
+
+    if(rootWorkDirCanonical[strlen(rootWorkDirCanonical) - 1] == '/')
+    {
+        rootWorkDirCanonical[strlen(rootWorkDirCanonical) - 1] = '\0';
+    }  
+
+    if (strncmp(combinedPathCanonical, rootWorkDirCanonical, strlen(rootWorkDirCanonical)) == 0) {
+        // The combined path is within or the same as the rootWorkDir
+        //Check if the rest part of combinedPathCanonical is a slash
+        int len_combined = strlen(combinedPathCanonical);
+        int len_root = strlen(rootWorkDirCanonical);
+        if ((len_combined > len_root) && (combinedPathCanonical[len_root] != '/')) {
+            return 1;
+        }
+        return 0;
+    } else {
+        // The combined path is at the parent or upper directory of rootWorkDir
+        return 1;
+    }
+}

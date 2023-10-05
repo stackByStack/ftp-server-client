@@ -64,4 +64,13 @@ void listDirectory(const char* path, int sock_data, int sock_cmd);
  */
 void printFileDetails(const char* path, struct stat fileStat, int sock_data, int sock_cmd);
 
+/**
+ * @brief Check if the path is in the parent directory or upper directory of the root working directory
+ * 
+ * @param absolutePath The absolute path
+ * @param rootWorkDir The root working directory
+ * @return int 1 if the path is in the upper directory of the root working directory, 0 otherwise
+ */
+int isUpperDirectory(const char* absolutePath, const char* rootWorkDir);
+
 #endif // FILESYSTEM_H
