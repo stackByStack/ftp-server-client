@@ -1,4 +1,4 @@
-server/log
 .vscode
 server/build
-
+test/
+server/server

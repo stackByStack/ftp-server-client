@@ -10,6 +10,7 @@ int socket_create(int port)
         #ifdef DEBUG
         perror("socket create error");
         #endif
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, socket create error\n", sockfd);
         return -1;
     }
 
@@ -21,7 +22,10 @@ int socket_create(int port)
     // set the socket option to be reusable
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &True, sizeof(int)) == -1) {
 		close(sockfd);
+        #ifdef DEBUG
 		perror("setsockopt() error");
+        #endif
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, setsockopt() error\n", sockfd);
 		return -1; 
 	}
     
@@ -30,6 +34,7 @@ int socket_create(int port)
         #ifdef DEBUG
         perror("socket bind error");
         #endif
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, socket bind error\n", sockfd);
         return -1;
     }
 
@@ -39,8 +44,11 @@ int socket_create(int port)
         #ifdef DEBUG
         perror("establish listen error");
         #endif
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, establish listen error\n", sockfd);
         return -1;
     }
+
+    logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, socket created\n", sockfd);
     return sockfd;
 }
 
@@ -53,6 +61,7 @@ int socket_connect(char *host, int port)
         #ifdef DEBUG
         perror("socket create error");
         #endif
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, socket create error\n", sockfd);
         return -1;
     }
     memset(&s_addr, 0, sizeof(s_addr));
@@ -63,6 +72,7 @@ int socket_connect(char *host, int port)
         #ifdef DEBUG
         perror("inet_pton error");
         #endif
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, inet_pton error\n", sockfd);
         return -1;
     }
     if (connect(sockfd, (struct sockaddr *)&s_addr, sizeof(s_addr)) < 0)
@@ -70,8 +80,10 @@ int socket_connect(char *host, int port)
         #ifdef DEBUG
         perror("connect to a remote host error");
         #endif
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, connect to a remote host error\n", sockfd);
         return -1;
     }
+    logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, socket connected\n", sockfd);
     return sockfd;
 }
 
@@ -85,8 +97,10 @@ int socket_accept(int listenfd)
         #ifdef DEBUG
         perror("accept error");
         #endif
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, accept error\n", clientfd);
         return -1;
     }
+    logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, socket accepted\n", clientfd);
     return clientfd;
 }
 
@@ -105,21 +119,26 @@ int socket_recv_data(int sockfd, char *buf, int bufsize)
             #ifdef DEBUG
             perror("recv data error");
             #endif
+            logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, recv data error\n", sockfd);
             return -1;
         }
         else if (recv_len == 0)
         {
             // Connection closed by the other end
+            logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, connection closed by the other end\n", sockfd);
             break;
         }
 
         total_len += recv_len;
+        // logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, received: %s\n", sockfd, buf);
 
         // Check if the complete command is received
-        if (buf[total_len - 1] == '\n')
+        if (buf[total_len - 1] == '\n' || buf[total_len - 1] == '\r')
         {
+            logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, received: %s\n", sockfd, buf);
             break;
         }
+        
     }
 
     buf[total_len] = '\0'; // Null-terminate the received data
@@ -135,8 +154,10 @@ int socket_send_data(int sockfd, char *buf, int bufsize)
         #ifdef DEBUG
         perror("send data error");
         #endif
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, send data error\n", sockfd);
         return -1;
     }
+    logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, sent: %s\n", sockfd, buf);
     return len;
 }
 
@@ -147,8 +168,10 @@ int socket_close(int sockfd)
         #ifdef DEBUG
         perror("close socket error");
         #endif
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, close socket error\n", sockfd);
         return -1;
     }
+    logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, socket closed\n", sockfd);
     return 0;
 }
 
@@ -157,13 +180,16 @@ int socket_send_response(int sockfd, int rc, char *msg)
     char buf[MAXSIZE];
     memset(buf, 0, MAXSIZE);
     sprintf(buf, "%d %s", rc, msg);
-    if (socket_send_data(sockfd, buf, MAXSIZE) < 0)
+    int str_len = strlen(buf);
+    if (socket_send_data(sockfd, buf, str_len) < 0)
     {
         #ifdef DEBUG
         perror("send response error");
         #endif
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, send response error\n", sockfd);
         return -1;
     }
+    logMessage(&logger, LOG_LEVEL_INFO, "sd: %d,  response sent: %s\n", sockfd, buf);
     return 0;
 }
 
@@ -177,6 +203,7 @@ int socket_get_ip(char *ip)
         #ifdef DEBUG
         perror("Error getting host name");
         #endif
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Error getting host name\n", -1);
         return -1;
     }
 
@@ -185,6 +212,7 @@ int socket_get_ip(char *ip)
         #ifdef DEBUG
         perror("Error getting host by name");
         #endif
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Error getting host by name\n", -1);
         return -1;
     }
 
@@ -195,10 +223,12 @@ int socket_get_ip(char *ip)
         #ifdef DEBUG
         fprintf(stderr, "No IP address found for the host\n");
         #endif
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, No IP address found for the host\n", -1);
         return -1;
     }
 
     strcpy(ip, inet_ntoa(*addr_list[0]));
+    logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, IP address: %s\n", -1, ip);
 
     return 0;
 }
@@ -214,6 +244,7 @@ void close_data_conn(int *sock_data, int *dataLinkEstablished, pthread_mutex_t *
         close(*sock_data);
         *sock_data = -1;
         *dataLinkEstablished = 0;
+        logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, data connection closed\n", *sock_data);
     }
     pthread_mutex_unlock(mutex);
 }

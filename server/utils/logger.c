@@ -2,21 +2,30 @@
 
 // Get the current timestamp
 void getCurrentTimeStamp(char* buffer, size_t bufferSize) {
-    time_t rawTime;
-    struct tm* timeInfo;
-    time(&rawTime);
-    timeInfo = localtime(&rawTime);
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+
+    time_t rawTime = tv.tv_sec;
+    struct tm* timeInfo = localtime(&rawTime);
+
+    char milliseconds[8];  // Adjusted buffer size
+
+    // Convert microseconds to milliseconds, limited to 3 decimal places
+    snprintf(milliseconds, sizeof(milliseconds), "%03ld", tv.tv_usec / 1000);
+
+    // Format the timestamp with milliseconds
     strftime(buffer, bufferSize, "%Y-%m-%d %H:%M:%S", timeInfo);
+    snprintf(buffer + strlen(buffer), bufferSize - strlen(buffer), ".%s", milliseconds);
 }
 
 // Open the log file
 void openLogFile(Logger* logger) {
     // Generate timestamp for the log file name
-    char timestamp[20];
+    char timestamp[40];
     getCurrentTimeStamp(timestamp, sizeof(timestamp));
 
     // Create the log file with the timestamp in its name
-    char filename[40];
+    char filename[80];
     snprintf(filename, sizeof(filename), "log/logfile_%s.txt", timestamp);
 
     logger->file = fopen(filename, "w");
@@ -35,7 +44,7 @@ void closeLogFile(Logger* logger) {
 // Write log message to the log file
 void writeToLogFile(Logger* logger, const char* levelStr, const char* message) {
     if (logger->file != NULL) {
-        char timestamp[20];
+        char timestamp[40];
         getCurrentTimeStamp(timestamp, sizeof(timestamp));
         fprintf(logger->file, "[%s] %s: %s\n", timestamp, levelStr, message);
         fflush(logger->file);

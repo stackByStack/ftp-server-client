@@ -1,6 +1,6 @@
 #include "fileSystem.h"
 
-void get_absolute_path(char *absolute_path, const char *rootWorkDir, const char *cwd, const char *filename)
+void get_absolute_path(char *absolute_path, const char *cwd, const char *rootWorkDir, const char *filename)
 {
     // Copy rootWorkDir first
     strncpy(absolute_path, rootWorkDir, MAX_PATH - 1);

@@ -5,6 +5,9 @@ void init_pool(ThreadPool* pool) {
     pool->rear = 0;
     pool->count = 0;
     pthread_mutex_init(&pool->mutex, NULL);
+    pthread_mutex_init(&pool->not_empty_mutex, NULL);
+    pthread_mutex_init(&pool->all_tasks_completed_mutex, NULL);
+    pthread_mutex_init(&pool->not_full_mutex, NULL);
     pthread_cond_init(&pool->not_empty, NULL);
     pthread_cond_init(&pool->not_full, NULL);
     pthread_cond_init(&pool->all_tasks_completed, NULL);
@@ -14,16 +17,23 @@ void init_pool(ThreadPool* pool) {
 
 void destroy_pool(ThreadPool* pool) {
     pthread_mutex_destroy(&pool->mutex);
+    pthread_mutex_destroy(&pool->not_empty_mutex);
+    pthread_mutex_destroy(&pool->all_tasks_completed_mutex);
+    pthread_mutex_destroy(&pool->not_full_mutex);
     pthread_cond_destroy(&pool->not_empty);
     pthread_cond_destroy(&pool->not_full);
     pthread_cond_destroy(&pool->all_tasks_completed);
 }
 
 void enqueue_task(ThreadPool* pool, Task* task) {
-    pthread_mutex_lock(&pool->mutex);
+    pthread_mutex_lock(&pool->not_full_mutex);
+    // logMessage(&logger, LOG_LEVEL_INFO, "not_full_mutex locked\n");
     while (pool->count == MAX_TASKS) {
-        pthread_cond_wait(&pool->not_full, &pool->mutex);
+        pthread_cond_wait(&pool->not_full, &pool->not_full_mutex);
     }
+    pthread_mutex_unlock(&pool->not_full_mutex);
+    // logMessage(&logger, LOG_LEVEL_INFO, "not_full_mutex unlocked\n");
+    pthread_mutex_lock(&pool->mutex);
     pool->tasks[pool->rear] = task;
     pool->rear = (pool->rear + 1) % MAX_TASKS;
     pool->count++;
@@ -34,14 +44,18 @@ void enqueue_task(ThreadPool* pool, Task* task) {
 
 Task* dequeue_task(ThreadPool* pool) {
     Task* task = NULL;
-    pthread_mutex_lock(&pool->mutex);
+    pthread_mutex_lock(&pool->not_empty_mutex);
+    // logMessage(&logger, LOG_LEVEL_INFO, "not_empty_mutex locked\n");
     while (pool->count == 0 && !pool->shutdown) {
-        pthread_cond_wait(&pool->not_empty, &pool->mutex);
+        pthread_cond_wait(&pool->not_empty, &pool->not_empty_mutex);
     }
     if (pool->shutdown) { // Check if shutdown requested
-        pthread_mutex_unlock(&pool->mutex);
+        pthread_mutex_unlock(&pool->not_empty_mutex);
         return NULL;
     }
+    pthread_mutex_unlock(&pool->not_empty_mutex);
+    // logMessage(&logger, LOG_LEVEL_INFO, "not_empty_mutex unlocked\n");
+    pthread_mutex_lock(&pool->mutex);
     task = pool->tasks[pool->front];
     pool->front = (pool->front + 1) % MAX_TASKS;
     pool->count--;
@@ -53,7 +67,9 @@ Task* dequeue_task(ThreadPool* pool) {
 void* worker(void* arg) {
     ThreadPool* pool = (ThreadPool*)arg;
     while (1) {
+        // logMessage(&logger, LOG_LEVEL_INFO, "worker thread waiting for task\n");
         Task* task = dequeue_task(pool);
+        // logMessage(&logger, LOG_LEVEL_INFO, "worker thread got task\n");
         if (task == NULL) { // Break the loop if shutdown requested
             break;
         }
@@ -74,6 +90,7 @@ void submit_task(ThreadPool* pool, void (*task)(void* arg), void* arg) {
     newTask->task = task;
     newTask->arg = arg;
     enqueue_task(pool, newTask);
+    // logMessage(&logger, LOG_LEVEL_INFO, "task enqueued\n");
 }
 
 // set the thread pool to be shutdown after all tasks are completed

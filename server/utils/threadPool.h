@@ -3,6 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include "logger.h"
+
+extern Logger logger;
 
 #define MAX_THREADS 10
 #define MAX_TASKS 100
@@ -18,6 +21,9 @@ typedef struct  ThreadPool {
     int rear;
     int count;
     pthread_mutex_t mutex;
+    pthread_mutex_t not_empty_mutex; // New mutex for not_empty condition variable
+    pthread_mutex_t all_tasks_completed_mutex; // New mutex for all_tasks_completed condition variable
+    pthread_mutex_t not_full_mutex; // New mutex for not_full condition variable
     pthread_cond_t not_empty;
     pthread_cond_t not_full;
     int shutdown; // New shutdown flag

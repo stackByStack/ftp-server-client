@@ -95,6 +95,7 @@ int port_process(int sock_cmd, int *sock_data, char *arg, int *dataLinkEstablish
     *dataLinkEstablished = 1;
     logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, Data link established under PORT mode.\n", *sock_data);
     pthread_mutex_unlock(mutex);
+    
     return 0;
 }
 
@@ -181,6 +182,7 @@ int pasv_process(int sock_cmd, int *sock_data, int *dataLinkEstablished, pthread
     // arg->pool = pool;
     arg->mutex = mutex;
     submit_task(pool, listen_pasv, arg);
+    logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, Submitted task to listen to client\n", sock_cmd);
     return 0;
 }
 
@@ -252,8 +254,8 @@ int retr_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootW
     if (access(path, F_OK) == -1)
     {
         // File does not exist, show error message to client
-        char msg[100];
-        sprintf(msg, "File %s does not exist.\r\n", arg);
+        char msg[MAXSIZE * 2];
+        sprintf(msg, "File %s does not exist.\r\n", path);
         socket_send_response(sock_cmd, 550, msg);
         logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, File %s does not exist.\n", sock_cmd, arg);
         // close the data connection
@@ -324,7 +326,7 @@ int retr_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootW
             return 1;
         }
         total_bytes_sent += bytes_read;
-        logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, bytes_sent: %d/%d\n", sock_cmd, total_bytes_sent, bytes_read);
+        logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, bytes_sent: %d/%d\n", sock_cmd, bytes_read, total_bytes_sent);
     }
 
     // Close the file
@@ -391,17 +393,17 @@ int stor_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootW
     }
 
     // Check if the file is writable
-    if (access(path, W_OK) == -1)
-    {
-        // File is not writable, show error message to client
-        char msg[100];
-        sprintf(msg, "File %s is not writable.\r\n", arg);
-        socket_send_response(sock_cmd, 550, msg);
-        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, File %s is not writable.\n", sock_cmd, arg);
-        // Close the data connection
-        close_data_conn(sock_data, dataLinkEstablished, mutex);
-        return 1;
-    }
+    // if (access(path, W_OK) == -1)
+    // {
+    //     // File is not writable, show error message to client
+    //     char msg[100];
+    //     sprintf(msg, "File %s is not writable.\r\n", arg);
+    //     socket_send_response(sock_cmd, 550, msg);
+    //     logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, File %s is not writable.\n", sock_cmd, arg);
+    //     // Close the data connection
+    //     close_data_conn(sock_data, dataLinkEstablished, mutex);
+    //     return 1;
+    // }
 
     // Open the file for writing
     FILE *file = fopen(path, "wb");

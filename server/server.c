@@ -75,9 +75,11 @@ int main(int argc, char *argv[])
 
         ftp_session_arg *arg = (ftp_session_arg *)malloc(sizeof(ftp_session_arg));
         arg->sock_cmd = sock_cmd;
+        arg->pool = &pool;
         strcpy(arg->rootWorkDir, rootWorkDir);
 
         submit_task(&pool, ftp_session, (void *)arg);
+        logMessage(&logger, LOG_LEVEL_INFO, "Task submitted\n");
     }
 
     // Close the log file
@@ -274,8 +276,8 @@ void ftp_session(void *arg)
         strcpy(arg1->arg, args);
         strcpy(arg1->cwd, cwd);
         strcpy(arg1->rootWorkDir, rootWorkDir);
+        logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, Task %s submitted\n", sock_cmd, cmd);
         submit_task(pool, process_command, (void *)arg1);
-        
     }
 
     close(sock_cmd);
@@ -295,7 +297,7 @@ void parse_command(int socket_cmd, char *buf, char *cmd, char *arg)
 {
     // Parse the command
     int i = 0;
-    while (buf[i] != ' ' && buf[i] != 0)
+    while (buf[i] != ' ' && buf[i] != 0 && buf[i] != '\n' && buf[i] != '\r')
     {
         cmd[i] = buf[i];
         i++;
@@ -303,7 +305,8 @@ void parse_command(int socket_cmd, char *buf, char *cmd, char *arg)
     cmd[i] = 0;
     i++;
     int j = 0;
-    while (buf[i] != '\n' && buf[i] != 0 && buf[i] != '\r')
+    int str_len = strlen(buf);
+    while (i < str_len && buf[i] != '\n' && buf[i] != 0 && buf[i] != '\r')
     {
         arg[j] = buf[i];
         i++;
@@ -534,6 +537,7 @@ void process_command(void *args)
     {
         *rnfr_flag = 0;
         rnfr_old_path[0] = 0;
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, RNFR command failed as the next cmd is not RNTO.\n", sock_cmd);
     }
 
     free(argp);
