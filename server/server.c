@@ -11,22 +11,30 @@ int main(int argc, char *argv[])
     // and the directory to be served
 
     // Parse the arguments
-    if (argc < 3 || strcmp(argv[1], "-port") != 0) {
-        logMessage(&logger, LOG_LEVEL_ERROR, "Usage: %s -port n [-root /path/to/dir]\n", argv[0]);
-        exit(1);
-    }
+    const char *defaultRoot = "/tmp";
+    int defaultPort = 21;
 
-    // Get the port number
-    int port = atoi(argv[2]);
-    if (port <= 0) {
-        logMessage(&logger, LOG_LEVEL_ERROR, "Invalid port number\n");
-        exit(1);
-    }
+    const char *rootWorkDir = defaultRoot;
+    int port = defaultPort;
 
-    // Set the default root directory if not provided
-    char *rootWorkDir = "/tmp";
-    if (argc >= 5 && strcmp(argv[3], "-root") == 0) {
-        rootWorkDir = argv[4];
+    for (int i = 1; i < argc; i += 2) {
+        if (strcmp(argv[i], "-root") == 0) {
+            if (i + 1 < argc) {
+                size_t rootLen = strlen(argv[i + 1]);
+                rootWorkDir = (char *) malloc(rootLen + 1);  // Allocate memory for root
+                strcpy((char *) rootWorkDir, argv[i + 1]);    // Copy value using strcpy
+            } else {
+                printf("Error: -root requires a value.\n");
+                return 1;
+            }
+        } else if (strcmp(argv[i], "-port") == 0) {
+            if (i + 1 < argc) {
+                port = atoi(argv[i + 1]);
+            } else {
+                printf("Error: -port requires a value.\n");
+                return 1;
+            }
+        }
     }
 
     logMessage(&logger, LOG_LEVEL_INFO, "port: %d, rootWorkDir: %s\n", port, rootWorkDir);

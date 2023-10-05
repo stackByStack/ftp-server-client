@@ -2,7 +2,7 @@
 CC = gcc
 
 # Compiler flags
-CFLAGS = -Wall -Wextra -g
+CFLAGS = -Wall -Wextra -g -pthread
 
 # Directories
 SRC_DIR = .
@@ -37,3 +37,4 @@ $(shell mkdir -p $(BUILD_DIR))
 # Clean rule
 clean:
 	rm -rf $(BUILD_DIR) $(TARGET)
+	
