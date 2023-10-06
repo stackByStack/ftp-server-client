@@ -76,23 +76,23 @@ int port_process(int sock_cmd, int *sock_data, char *arg, int *dataLinkEstablish
     logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, PORT command successful. Connecting to %s:%d\n", sock_cmd, ip, port_num);
 
     pthread_mutex_lock(mutex);
-    int shut = shutdown(*sock_data, SHUT_RDWR); // Shutdown the previous connection
-    logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, shutdown: %d\n", *sock_data, shut);
-    close(*sock_data); // Close the previous connection
+    // int shut = shutdown(*sock_data, SHUT_RDWR); // Shutdown the previous connection
+    // logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, shutdown: %d\n", *sock_data, shut);
+    // close(*sock_data); // Close the previous connection
 
-    *sock_data = -1; // Reset sock_data to indicate the connection is closed
+    // *sock_data = -1; // Reset sock_data to indicate the connection is closed
 
     int new_sock_data = socket_connect(ip, port_num);
     if (new_sock_data < 0)
     {
         logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Error: cannot connect to the client.\n", sock_cmd);
-        *dataLinkEstablished = 0;
+        // *dataLinkEstablished = 0;
         // delay showing error message to client until RETR or STOR command
         return -1;
     }
 
     *sock_data = new_sock_data; // Update sock_data with the new connection
-    *dataLinkEstablished = 1;
+    *dataLinkEstablished += 1;
     logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, Data link established under PORT mode.\n", *sock_data);
     pthread_mutex_unlock(mutex);
     
@@ -107,11 +107,11 @@ int pasv_process(int sock_cmd, int *sock_data, int *dataLinkEstablished, pthread
     socket_get_ip(ip);
 
     pthread_mutex_lock(mutex);
-    int shut = shutdown(*sock_data, SHUT_RDWR); // Shutdown the previous connection
-    logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, shutdown: %d\n", *sock_data, shut);
-    close(*sock_data); // Close the previous connection
+    // int shut = shutdown(*sock_data, SHUT_RDWR); // Shutdown the previous connection
+    // logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, shutdown: %d\n", *sock_data, shut);
+    // close(*sock_data); // Close the previous connection
 
-    *sock_data = -1; // Reset sock_data to indicate the connection is closed
+    // *sock_data = -1; // Reset sock_data to indicate the connection is closed
 
     int new_sock_data = -1;
     int retries = 0;
@@ -135,7 +135,7 @@ int pasv_process(int sock_cmd, int *sock_data, int *dataLinkEstablished, pthread
         {
             // Other error occurred, handle it accordingly
             logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Error: cannot listen to the client. errno: %d\n", sock_cmd, errno);
-            *dataLinkEstablished = 0;
+            // *dataLinkEstablished = 0;
             // Delay showing the error message to the client until RETR or STOR command
             pthread_mutex_unlock(mutex);
             return -1;
@@ -146,14 +146,14 @@ int pasv_process(int sock_cmd, int *sock_data, int *dataLinkEstablished, pthread
     {
         // Failed to find an available port after maximum retries
         logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Error: maximum retries exceeded. Cannot listen to the client.\n", sock_cmd);
-        *dataLinkEstablished = 0;
+        // *dataLinkEstablished = 0;
         // Delay showing the error message to the client until RETR or STOR command
         pthread_mutex_unlock(mutex);
         return -1;
     }
 
     *sock_data = new_sock_data; // Update sock_data with the new connection
-    *dataLinkEstablished = 0;   // Still listening for client to connect
+    // *dataLinkEstablished = 0;   // Still listening for client to connect
     pthread_mutex_unlock(mutex);
 
     // ip format 127,0,0,1
@@ -195,14 +195,14 @@ void listen_pasv(void *args)
     // ThreadPool *pool = arg->pool;
     pthread_mutex_t *mutex = arg->mutex;
 
-    pthread_mutex_lock(mutex);
-    if (*dataLinkEstablished == 1)
-    {
-        pthread_mutex_unlock(mutex);
-        logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, listen_pasv: Data link already established. Not listening for new connections.\n", *sock_data);
-        return;
-    }
-    pthread_mutex_unlock(mutex);
+    // pthread_mutex_lock(mutex);
+    // if (*dataLinkEstablished == 1)
+    // {
+    //     pthread_mutex_unlock(mutex);
+    //     logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, listen_pasv: Data link already established. Not listening for new connections.\n", *sock_data);
+    //     return;
+    // }
+    // pthread_mutex_unlock(mutex);
 
     int new_sock_data = socket_accept(*sock_data);
     if (new_sock_data < 0)
@@ -211,23 +211,26 @@ void listen_pasv(void *args)
     }
 
     pthread_mutex_lock(mutex);
-    if (*dataLinkEstablished == 1)
-    {
-        // Data link already established, close the new connection
-        close(new_sock_data);
-        logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, listen_pasv: Though new link established, Data link already established during the creating . Not listening for new connections.\n", *sock_data);
-    }
-    else
-    {
-        // Data link not established, update sock_data with the new connection
-        *dataLinkEstablished = 1;
-        *sock_data = new_sock_data;
-        logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, listen_pasv: Data link established.\n", *sock_data);
-    }
+    // if (*dataLinkEstablished == 1)
+    // {
+    //     // Data link already established, close the new connection
+    //     close(new_sock_data);
+    //     logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, listen_pasv: Though new link established, Data link already established during the creating . Not listening for new connections.\n", *sock_data);
+    // }
+    // else
+    // {
+    //     // Data link not established, update sock_data with the new connection
+    //     *dataLinkEstablished = 1;
+    //     *sock_data = new_sock_data;
+    //     logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, listen_pasv: Data link established.\n", *sock_data);
+    // }
+    *dataLinkEstablished += 1;
+    *sock_data = new_sock_data;
+    logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, listen_pasv: Data link established.\n", *sock_data);
     pthread_mutex_unlock(mutex);
 }
 
-int retr_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex)
+int retr_process(int sock_cmd, int sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex)
 {
     pthread_mutex_lock(mutex);
     if (*dataLinkEstablished == 0)
@@ -325,7 +328,7 @@ int retr_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootW
 
     while ((bytes_read = fread(buffer, 1, MAXSIZE, fp)) > 0)
     {
-        if (socket_send_data(*sock_data, buffer, bytes_read) < 0)
+        if (socket_send_data(sock_data, buffer, bytes_read) < 0)
         {
             // Error occurred while sending data, show error message to client
             char msg[100];
@@ -355,7 +358,7 @@ int retr_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootW
     return 0;
 }
 
-int stor_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex)
+int stor_process(int sock_cmd, int sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex)
 {
     pthread_mutex_lock(mutex);
     if (*dataLinkEstablished == 0)
@@ -447,7 +450,7 @@ int stor_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootW
     char buffer[MAXSIZE];
     ssize_t bytesRead;
     ssize_t bytesWritten = 0;
-    while ((bytesRead = recv(*sock_data, buffer, sizeof(buffer), 0)) > 0)
+    while ((bytesRead = recv(sock_data, buffer, sizeof(buffer), 0)) > 0)
     {
         ssize_t itemsWritten = fwrite(buffer, 1, bytesRead, file);
         if (itemsWritten != bytesRead)
@@ -606,7 +609,7 @@ int cwd_process(int sock_cmd, char *arg, char *cwd, char *rootWorkDir)
     return 0;
 }
 
-int list_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex)
+int list_process(int sock_cmd, int sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex)
 {
     pthread_mutex_lock(mutex);
     if (*dataLinkEstablished == 0)
@@ -657,9 +660,9 @@ int list_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootW
     struct stat pathStat;
     if (stat(path, &pathStat) == 0) {
         if (S_ISDIR(pathStat.st_mode)) {
-            listDirectory(path, *sock_data, sock_cmd);
+            listDirectory(path, sock_data, sock_cmd);
         } else {
-            printFileDetails(path, pathStat, *sock_data, sock_cmd);
+            printFileDetails(path, pathStat, sock_data, sock_cmd);
         }
     } else {
         char msg[MAXSIZE * 2];

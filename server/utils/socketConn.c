@@ -233,18 +233,18 @@ int socket_get_ip(char *ip)
     return 0;
 }
 
-void close_data_conn(int *sock_data, int *dataLinkEstablished, pthread_mutex_t *mutex)
+void close_data_conn(int sock_data, int *dataLinkEstablished, pthread_mutex_t *mutex)
 {
     pthread_mutex_lock(mutex);
-    if (*dataLinkEstablished == 1)
+    if (*dataLinkEstablished != 0)
     {
         // Data link established, close the connection
-        int shut = shutdown(*sock_data, SHUT_RDWR);
-        logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, shutdown: %d\n", *sock_data, shut);
-        close(*sock_data);
-        *sock_data = -1;
-        *dataLinkEstablished = 0;
-        logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, data connection closed\n", *sock_data);
+        int shut = shutdown(sock_data, SHUT_RDWR);
+        logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, shutdown: %d\n", sock_data, shut);
+        close(sock_data);
+        sock_data = -1;
+        *dataLinkEstablished -= 1;
+        logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, data connection closed\n", sock_data);
     }
     pthread_mutex_unlock(mutex);
 }

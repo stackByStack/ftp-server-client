@@ -57,7 +57,7 @@ void listen_pasv(void *args);
  * @param mutex Mutex to lock the data link established flag
  * @return int Returns 0 if the command was successful, -1 otherwise 
 */
-int retr_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex);
+int retr_process(int sock_cmd, int sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex);
 
 /**
  * @brief Process the STOR command
@@ -71,7 +71,7 @@ int retr_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootW
  * @param mutex Mutex to lock the data link established flag
  * @return int Returns 0 if the command was successful, -1 otherwise 
 */
-int stor_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex);
+int stor_process(int sock_cmd, int sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex);
 
 /**
  * @brief Process the SYST command
@@ -122,7 +122,7 @@ int cwd_process(int sock_cmd, char *arg, char *cwd, char *rootWorkDir);
  * @param mutex Mutex to lock the data link established flag
  * @return int Returns 0 if the command was successful, -1 otherwise
 */
-int list_process(int sock_cmd, int *sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex);
+int list_process(int sock_cmd, int sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex);
 
 /**
  * @brief Process the MKD command

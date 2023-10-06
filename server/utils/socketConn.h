@@ -102,6 +102,6 @@ int socket_get_ip(char *ip);
  * @param dataLinkEstablished flag to indicate if data connection is established
  * @param mutex mutex to lock dataLinkEstablished
 */
-void close_data_conn(int *sock_data, int *dataLinkEstablished, pthread_mutex_t *mutex);
+void close_data_conn(int sock_data, int *dataLinkEstablished, pthread_mutex_t *mutex);
 
 #endif

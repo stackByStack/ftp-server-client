@@ -377,7 +377,7 @@ void process_command(void *args)
     // else if cmd is RETR, we need to send a file
     else if(strncmp(cmd, "RETR", 4) == 0)
     {
-        if(retr_process(sock_cmd, sock_data, arg, cwd, rootWorkDir, dataLinkEstablished, mutex_data) != 0)
+        if(retr_process(sock_cmd, *sock_data, arg, cwd, rootWorkDir, dataLinkEstablished, mutex_data) != 0)
         {
             logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, RETR command failed.\n", sock_cmd);
             return;
@@ -391,7 +391,7 @@ void process_command(void *args)
     // else if cmd is STOR, we need to receive a file
     else if(strncmp(cmd, "STOR", 4) == 0)
     {
-        if(stor_process(sock_cmd, sock_data, arg, cwd, rootWorkDir, dataLinkEstablished, mutex_data) != 0)
+        if(stor_process(sock_cmd, *sock_data, arg, cwd, rootWorkDir, dataLinkEstablished, mutex_data) != 0)
         {
             logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, STOR command failed.\n", sock_cmd);
             return;
@@ -461,7 +461,7 @@ void process_command(void *args)
     // else if cmd is LIST, we need to list the files in the current working directory
     else if(strncmp(cmd, "LIST", 4) == 0)
     {
-        if(list_process(sock_cmd, sock_data, arg, cwd, rootWorkDir, dataLinkEstablished, mutex_data) != 0)
+        if(list_process(sock_cmd, *sock_data, arg, cwd, rootWorkDir, dataLinkEstablished, mutex_data) != 0)
         {
             logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, LIST command failed.\n", sock_cmd);
             return;
