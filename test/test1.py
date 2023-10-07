@@ -32,6 +32,8 @@ def test_pwd(ftp: FTP):
     
 def test_cwd(ftp: FTP):
     print("entering cwd")
+    # print(ftp.cwd('../../root/test/../test'))
+    print(ftp.cwd('../../root/test/../'))
     print(ftp.cwd('test'))
     print(ftp.pwd())
     print(ftp.cwd('../'))
