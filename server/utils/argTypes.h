@@ -21,8 +21,8 @@ typedef struct process_command_arg
     int sock_cmd;
     char cmd[MAXSIZE];
     char arg[MAXSIZE];
-    char cwd[MAXSIZE];
-    char rootWorkDir[MAXSIZE];
+    char *cwd;
+    char *rootWorkDir;
     int *dataLinkEstablished;
     int *sock_data;
     pthread_mutex_t *mutex_data;

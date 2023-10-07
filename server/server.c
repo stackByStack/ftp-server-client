@@ -272,10 +272,13 @@ void ftp_session(void *arg)
         arg1->rnfr_flag = &rnfr_flag;
         arg1->rnfr_old_path = rnfr_old_path;
         arg1->pool = pool;
+        arg1->cwd = cwd;
+        arg1->rootWorkDir = rootWorkDir;
         strcpy(arg1->cmd, cmd);
         strcpy(arg1->arg, args);
-        strcpy(arg1->cwd, cwd);
-        strcpy(arg1->rootWorkDir, rootWorkDir);
+        // strcpy(arg1->cwd, cwd);
+        // strcpy(arg1->rootWorkDir, rootWorkDir);
+
         logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, Task %s submitted\n", sock_cmd, cmd);
         submit_task(pool, process_command, (void *)arg1);
     }

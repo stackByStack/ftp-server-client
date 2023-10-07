@@ -608,9 +608,9 @@ int cwd_process(int sock_cmd, char *arg, char *cwd, char *rootWorkDir)
 
     // send the response of accepting the message to client
     char successMsg[100];
-    sprintf(successMsg, "Directory changed to %s\r\n", arg);
+    sprintf(successMsg, "Directory changed to %s\r\n", cwd);
     socket_send_response(sock_cmd, 250, successMsg);
-    logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, Directory changed to %s\n", sock_cmd, arg);
+    logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, Directory changed to %s\n", sock_cmd, cwd);
     return 0;
 }
 
@@ -824,7 +824,7 @@ int rnfr_process(int sock_cmd, char *arg, char *cwd, char *rootWorkDir, char *ol
     }
 
     // Save the old name to the corresponding address
-    strcpy(oldname, arg);
+    strcpy(oldname, old_path);
 
     // Send success message to client
     socket_send_response(sock_cmd, 350, "RNFR command successful.\r\n");
@@ -878,7 +878,7 @@ int rnto_process(int sock_cmd, char *arg, char *cwd, char *rootWorkDir, char *ol
         char msg[100];
         sprintf(msg, "Failed to rename file/directory.\r\n");
         socket_send_response(sock_cmd, 550, msg);
-        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Failed to rename file/directory.\n", sock_cmd);
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Failed to rename file/directory %s %s.\n", sock_cmd, oldName, new_path);
         return 1;
     }
 

@@ -18,12 +18,12 @@ void get_absolute_path(char *absolute_path, const char *cwd, const char *rootWor
     
 
     // Check if the rootWorkDir has a trailing slash
-    int rootWorkDirLen = strlen(rootWorkDir);
-    if (rootWorkDir[rootWorkDirLen - 1] != '/')
-    {
-        // Append a slash to the rootWorkDir
-        strncat(absolute_path, "/", MAX_PATH - rootWorkDirLen - 1);
-    }
+    // int rootWorkDirLen = strlen(rootWorkDir);
+    // if (rootWorkDir[rootWorkDirLen - 1] != '/')
+    // {
+    //     // Append a slash to the rootWorkDir
+    //     strncat(absolute_path, "/", MAX_PATH - rootWorkDirLen - 1);
+    // }
 
     // Check if the cwd is not empty
     if (cwd[0] != '\0')
