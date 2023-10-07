@@ -62,9 +62,9 @@ print(ftp.getwelcome())
 # use two thread to test
 t1 = threading.Thread(target=port_down, args=(ftp, directory))
 t2 = threading.Thread(target=pasv_upload, args=(ftp, directory))
-t3 = threading.Thread(target=list, args=(ftp,))
+t3 = threading.Thread(target=pasv_upload, args=(ftp, directory))
 # wait for two thread
-# t1.start()
+t1.start()
 t2.start()
 t3.start()
 
@@ -72,7 +72,7 @@ t3.start()
 # print("main process")
 # print(ftp.retrlines('LIST'))
 
-# t1.join()
+t1.join()
 t2.join()
 t3.join()
 # print ftp quit info
