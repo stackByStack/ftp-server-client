@@ -101,8 +101,13 @@ int port_process(int sock_cmd, int *sock_data, char *arg, int *dataLinkEstablish
 
 int pasv_process(int sock_cmd, int *sock_data, int *dataLinkEstablished, pthread_mutex_t *mutex, int *passive_mode, ThreadPool *pool)
 {
-    srand(time(NULL));
-    int port_num = rand() % 45535 + 20000;
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+
+    // Use milliseconds as the seed for srand
+    unsigned int seed = (unsigned int)(tv.tv_usec);
+    srand(seed);
+    int port_num = (rand()) % 45535 + 20000;
     char ip[30];
     socket_get_ip(ip);
 
