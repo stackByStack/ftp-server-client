@@ -3,11 +3,12 @@ const moment = require('moment');
 
 //create a custom class of logger that is based on winston
 class LoggerService {
-    constructor(route) {
+    constructor(route, sessionId) {
         this.log_data = null;
         this.route = route;
+        this.sessionId = sessionId;
         const timestamp = moment().format('YYYY-MM-DD_HH-mm-ss-SSS');
-        const filename = `./logs/${this.route}_${timestamp}.log`;
+        const filename = `./logs/${this.route}_${this.sessionId}_${timestamp}.log`;
 
         this.logger = winston.createLogger({
         level: 'info',
@@ -29,6 +30,7 @@ class LoggerService {
     async info(message) {
         const data = {
             timestamp: moment().format('YYYY-MM-DD HH:mm:ss.SSS'),
+            sessionId: this.sessionId,
         };
         this.logger.log('info', message, { log_data: data });
     }
@@ -36,6 +38,7 @@ class LoggerService {
     async error(message) {
         const data = {
             timestamp: moment().format('YYYY-MM-DD HH:mm:ss.SSS'),
+            sessionId: this.sessionId,
         };
         this.logger.log('error', message, { log_data: data });
     }
@@ -43,12 +46,11 @@ class LoggerService {
     async warn(message) {
         const data = {
             timestamp: moment().format('YYYY-MM-DD HH:mm:ss.SSS'),
+            sessionId: this.sessionId,
         };
         this.logger.log('warn', message, { log_data: data });
     }
 }
 
-// Create a logger instance
-const logger = new LoggerService('ftp');
 
-export default logger;
+export default LoggerService;
