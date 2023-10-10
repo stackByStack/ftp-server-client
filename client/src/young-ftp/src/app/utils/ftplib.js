@@ -22,6 +22,7 @@ class ftpSession {
         this.welcome = '';
         this.lastresp = '';
         this.textEncoder = new TextEncoder(encoding);
+        this.socketcmdOn = false;
 
 
 
@@ -48,6 +49,7 @@ class ftpSession {
 
         this.socketcmd.connect(this.host, this.port, this.timeout, this.source_address);
 
+        this.socketcmdOn = true;
         this.welcome = this.getresp();
         return this.welcome;
     }
@@ -324,8 +326,231 @@ class ftpSession {
             this.logger.error(`retrbinary: error=${error}`);
             throw new Error(`retrbinary: error=${error}`);
         }
-        conn.close();
+        this.closeSocketCmd(conn);
         return this.voidresp();
+    }
+
+    retrlines(cmd, callback = null) {
+        if (callback == null) {
+            callback = this.printLine;
+        }
+        resp = this.sendcmd('TYPE A');
+        conn = null;
+        try {
+            conn = this.transfercmd(cmd);
+        } catch (error) {
+            this.logger.error(`retrlines: error=${error}`);
+            throw new Error(`retrlines: error=${error}`);
+        }
+
+        try {
+            let buffer = '';
+            while (true) {
+                data = conn.read();
+                if (!data) {
+                    break;
+                }
+                buffer += data;
+                let index = buffer.indexOf(FTP_CRLF);
+                while (index != -1) {
+                    let line = buffer.substring(0, index);
+                    buffer = buffer.substring(index + 2);
+                    callback(line);
+                    index = buffer.indexOf(FTP_CRLF);
+                }
+                index = buffer.indexOf('\n');
+                while (index != -1) {
+                    let line = buffer.substring(0, index);
+                    buffer = buffer.substring(index + 1);
+                    callback(line);
+                    index = buffer.indexOf('\n');
+                }
+            }
+        }
+        catch (error) {
+            this.logger.error(`retrlines: error=${error}`);
+            throw new Error(`retrlines: error=${error}`);
+        }
+
+        this.closeSocketCmd(conn);
+        return this.voidresp();
+    }
+
+    storbinary(cmd, fp, blocksize = 8192, callback = null, rest = null) {
+        this.voidcmd('TYPE I');
+        conn = null;
+        try {
+            conn = this.transfercmd(cmd, rest);
+        } catch (error) {
+            this.logger.error(`storbinary: error=${error}`);
+            throw new Error(`storbinary: error=${error}`);
+        }
+        try {
+            while (true) {
+                buf = fp.read(blocksize);
+                if (!buf) {
+                    break;
+                }
+                conn.write(buf);
+                if (callback) {
+                    callback(buf);
+                }
+            }
+        } catch (error) {
+            this.logger.error(`storbinary: error=${error}`);
+            throw new Error(`storbinary: error=${error}`);
+        }
+        this.closeSocketCmd(conn);
+        return this.voidresp();
+    }
+
+    storlines(cmd, fp, callback = null) {
+        this.voidcmd('TYPE A');
+        conn = null;
+        try {
+            conn = this.transfercmd(cmd);
+        } catch (error) {
+            this.logger.error(`storlines: error=${error}`);
+            throw new Error(`storlines: error=${error}`);
+        }
+        try {
+            while (true) {
+                buf = fp.readline();
+                if (!buf) {
+                    break;
+                }
+                if (buf.slice(-2) != FTP_CRLF) {
+                    if (buf.slice(-1) == '\n' || buf.slice(-1) == '\r') {
+                        buf = buf.substring(0, -1);
+                        buf += FTP_CRLF;
+                    }
+                }
+                conn.write(buf);
+                if (callback) {
+                    callback(buf);
+                }
+            }
+        }
+        catch (error) {
+            this.logger.error(`storlines: error=${error}`);
+            throw new Error(`storlines: error=${error}`);
+        }
+        this.closeSocketCmd(conn);
+        return this.voidresp();
+    }
+
+    dir(path = '.', callback = null) {
+        return this.retrlines('LIST ' + path, callback);
+    }
+
+    rename(fromname, toname) {
+        resp = this.sendcmd('RNFR ' + fromname);
+        if (resp[0] != '3') {
+            this.logger.error(`rename: resp=${resp}`);
+            throw new Error(`rename: resp=${resp}`);
+        }
+        resp = this.sendcmd('RNTO ' + toname);
+        if (resp[0] != '2') {
+            this.logger.error(`rename: resp=${resp}`);
+            throw new Error(`rename: resp=${resp}`);
+        }
+        return resp;
+    }
+
+    delete(path) {
+        resp = this.sendcmd('DELE ' + path);
+        if (resp.slice(0, 3) == '250' || resp.slice(0, 3) == '200') {
+            return resp;
+        }
+        else {
+            this.logger.error(`delete: resp=${resp}`);
+            throw new Error(`delete: resp=${resp}`);
+        }
+    }
+
+    cwd(path) {
+        if (path == '') {
+            path = '.';
+        }
+        if (path == '..') {
+            try {
+                return this.voidcmd('CDUP');
+            }
+            catch (error) {
+                this.logger.error(`cwd: error=${error}`);
+                throw new Error(`cwd: error=${error}`);
+            }
+        }
+        cmd = 'CWD ' + path;
+        return this.voidcmd(cmd);
+    }
+
+    size(filename) {
+        resp = this.sendcmd('SIZE ' + filename);
+        if (resp.slice(0, 3) == '213') {
+            s = resp.split(' ')[1];
+            return parseInt(s, 10);
+        }
+        else {
+            this.logger.error(`size: resp=${resp}`);
+            throw new Error(`size: resp=${resp}`);
+        }
+    }
+
+    parse257(resp) {
+        if (resp.slice(0, 3) != '257') {
+            this.logger.error(`parse257: resp=${resp}`);
+            throw new Error(`parse257: resp=${resp}`);
+        }
+        i = resp.indexOf('"');
+        j = resp.indexOf('"', i + 1);
+        if (i == -1 || j == -1) {
+            this.logger.error(`parse257: resp=${resp}`);
+            throw new Error(`parse257: resp=${resp}`);
+        }
+        return resp.substring(i + 1, j);
+    }
+
+    mkd(path) {
+        resp = this.voidcmd('MKD ' + path);
+        if(resp.slice(0, 3) == '257') {
+            return this.parse257(resp);
+        }
+        else {
+            this.logger.error(`mkd: resp=${resp}`);
+            throw new Error(`mkd: resp=${resp}`);
+        }
+    }
+
+    rmd(path) {
+        return this.voidcmd('RMD ' + path);
+    }
+
+    pwd() {
+        resp = this.voidcmd('PWD');
+        if (resp.slice(0, 3) == '257') {
+            return this.parse257(resp);
+        }
+        else { 
+            this.logger.error(`pwd: resp=${resp}`);
+            throw new Error(`pwd: resp=${resp}`);
+        }
+    }
+
+    quit() {
+        resp = this.voidcmd('QUIT');
+        this.closeSocketCmd(this.socketcmd);
+        this.socketcmdOn = false;
+        return resp;
+    }
+
+    close() {
+        this.quit();
+    }
+
+
+    printLine(line) {
+        this.logger.info(`printLine: line=${line}`);
     }
 
 
@@ -354,7 +579,9 @@ class ftpSession {
 
     destroy() {
         //safely close the socket of cmd and handle possible error or exception and record it in the log
-        this.closeSocketCmd(this.socketcmd);
+        if (this.socketcmdOn) {
+            this.closeSocketCmd(this.socketcmd);
+        }
     }
 
     getWelcome() {
