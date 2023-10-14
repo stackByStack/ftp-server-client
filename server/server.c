@@ -534,6 +534,11 @@ void process_command(void *args)
             return;
         }
     }
+    else
+    {
+        socket_send_response(sock_cmd, 500, "Invalid command.\r\n");
+        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Invalid command.\n", sock_cmd);
+    }
 
 
     if(*rnfr_flag == 1 && strncmp(cmd, "RNFR", 4) != 0)
