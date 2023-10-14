@@ -1,0 +1,12 @@
+.MuiAccordion-root {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    /* color: #718096; */
+    background-color: rgba(100, 107, 117, 0.1);
+    border-width: 1px;
+    border-color: rgba(31, 41, 55, 0.1);
+}

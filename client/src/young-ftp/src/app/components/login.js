@@ -4,36 +4,49 @@ import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import CssBaseline from '@mui/material/CssBaseline';
 import TextField from '@mui/material/TextField';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Checkbox from '@mui/material/Checkbox';
-import Link from '@mui/material/Link';
+// import FormControlLabel from '@mui/material/FormControlLabel';
+// import Checkbox from '@mui/material/Checkbox';
+// import Link from '@mui/material/Link';
 import Paper from '@mui/material/Paper';
 import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import SelectInput from '@mui/material/Select/SelectInput';
+// import LinearProgress from '@mui/material/LinearProgress';
 import Typography from '@mui/material/Typography';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
+import CircularProgress from '@mui/material/CircularProgress';
 import CopyRight from './copyright';
 
 const defaultTheme = createTheme();
 
-export default function SignInSide() {
-  const handleSubmit = (event) => {
+export default function SignInSide({ callback }) {
+  const [isLogining, setIsLogining] = React.useState(false);
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     console.log({
       host: data.get('host'),
       port: data.get('port'),
-      user: data.get('user'),
+      username: data.get('username'),
       password: data.get('password'),
       encoding: data.get('encoding'),
       timeout: data.get('timeout'),
     });
+    setIsLogining(true);
+    await callback({
+      host: data.get('host'),
+      port: data.get('port'),
+      username: data.get('username'),
+      password: data.get('password'),
+      timeout: data.get('timeout'),
+    });
+    setIsLogining(false);
   };
 
   return (
     <ThemeProvider theme={defaultTheme}>
+      {/* {isLogining ? <LinearProgress /> : null} */}
       <Grid container component="main" sx={{ height: '100vh' }}>
         <CssBaseline />
         <Grid
@@ -60,10 +73,11 @@ export default function SignInSide() {
               alignItems: 'center',
             }}
           >
-            <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
+            <Avatar sx={{ m: 1, bgcolor: '#757de8' }}>
               <LockOutlinedIcon />
             </Avatar>
             <Typography component="h1" variant="h5">
+
               Sign in
             </Typography>
             <Box component="form" noValidate onSubmit={handleSubmit} sx={{ mt: 1 }}>
@@ -89,9 +103,9 @@ export default function SignInSide() {
                 margin="normal"
                 required
                 fullWidth
-                id="user"
-                label="User"
-                name="user"
+                id="username"
+                label="Username"
+                name="username"
                 autoComplete="off"
               />
               <TextField
@@ -102,14 +116,6 @@ export default function SignInSide() {
                 label="Password"
                 name="password"
                 type="password"
-                autoComplete="off"
-              />
-              <TextField
-                margin="normal"
-                fullWidth
-                id="encoding"
-                label="Encoding"
-                name="encoding"
                 autoComplete="off"
               />
               <TextField
@@ -138,8 +144,14 @@ export default function SignInSide() {
                   }
                 }}
               >
+
                 Sign In
               </Button>
+              {isLogining ?
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                  <CircularProgress />
+                </div>
+                : null}
               <CopyRight sx={{ mt: 5 }} />
             </Box>
           </Box>
