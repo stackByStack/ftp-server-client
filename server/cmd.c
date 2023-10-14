@@ -85,7 +85,10 @@ int port_process(int sock_cmd, int *sock_data, char *arg, int *dataLinkEstablish
     int new_sock_data = socket_connect(ip, port_num);
     if (new_sock_data < 0)
     {
+        char msg1[100] = {0};
         logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Error: cannot connect to the client.\n", sock_cmd);
+        sprintf(msg1, "Error: cannot connect to the client.\r\n");
+        socket_send_response(sock_cmd, 425, msg1);
         // *dataLinkEstablished = 0;
         // delay showing error message to client until RETR or STOR command
         return -1;
@@ -151,6 +154,9 @@ int pasv_process(int sock_cmd, int *sock_data, int *dataLinkEstablished, pthread
     {
         // Failed to find an available port after maximum retries
         logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Error: maximum retries exceeded. Cannot listen to the client.\n", sock_cmd);
+        char msg1[100] = {0};
+        sprintf(msg1, "Error: maximum retries exceeded. Cannot listen to the client.\r\n");
+        socket_send_response(sock_cmd, 425, msg1);
         // *dataLinkEstablished = 0;
         // Delay showing the error message to the client until RETR or STOR command
         pthread_mutex_unlock(mutex);

@@ -24,14 +24,14 @@ int main(int argc, char *argv[])
                 rootWorkDir = (char *) malloc(rootLen + 1);  // Allocate memory for root
                 strcpy((char *) rootWorkDir, argv[i + 1]);    // Copy value using strcpy
             } else {
-                printf("Error: -root requires a value.\n");
+                logMessage(&logger, LOG_LEVEL_ERROR, "Error: -root requires a value.\n");
                 return 1;
             }
         } else if (strcmp(argv[i], "-port") == 0) {
             if (i + 1 < argc) {
                 port = atoi(argv[i + 1]);
             } else {
-                printf("Error: -port requires a value.\n");
+                logMessage(&logger, LOG_LEVEL_ERROR, "Error: -port requires a value.\n");
                 return 1;
             }
         }
@@ -127,9 +127,6 @@ int ftp_login(int sock_cmd, char *password)
             username[i++] = buf[n++];
         }
         username[i] = 0;
-        #ifdef DEBUG
-        printf("username: %s\n", username);
-        #endif
         logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, username: %s\n", sock_cmd, username);
         
         //return 331 code to ask for passwd
@@ -176,9 +173,6 @@ int ftp_login(int sock_cmd, char *password)
             password[i++] = buf[n++];
         }
         password[i] = 0;
-        #ifdef DEBUG
-        printf("password: %s\n", password);
-        #endif
         logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, identity: %s\n", sock_cmd, password);
 
         //Check success
@@ -316,9 +310,6 @@ void parse_command(int socket_cmd, char *buf, char *cmd, char *arg)
         j++;
     }
     arg[j] = 0;
-    #ifdef DEBUG
-    printf("cmd: %s, arg: %s\n", cmd, arg);
-    #endif
     logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, cmd: %s, arg: %s\n", socket_cmd, cmd, arg);
 
 }
