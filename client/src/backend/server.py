@@ -123,14 +123,14 @@ def upload():
     
     path = request.form['path']
     content = request.files['file']
-    print(path)
-    print(content)
+    if path[-1] != '/':
+        path += '/'
     orignalFtp = ftpSessions[sessionId]
     newFtp = FTP()
     newFtp.connect(orignalFtp.host, orignalFtp.port)
     newFtp.login(orignalFtp.username, orignalFtp.password)
     try:
-        resp = newFtp.storbinary('STOR ' + content.filename, content.stream)
+        resp = newFtp.storbinary('STOR ' + path + content.filename, content.stream)
         return jsonify({'status': 'success', 'desc': resp}), 200
     except Exception as e:
         return jsonify({'status': 'failed', 'desc': e}), 400

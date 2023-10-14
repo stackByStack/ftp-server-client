@@ -189,8 +189,7 @@ export default function ftpPage() {
 
     const handleFileChange = async (e) => {
         const files = e.target.files;
-        const nowpath = String(ftpPath);
-        console.log('nowpath ', nowpath);
+        // const nowpath = ftpPath;
         let haveOneSuccess = false;
         if (files.length !== 0) {
             for (let i = 0; i < files.length; i++) {
@@ -211,6 +210,7 @@ export default function ftpPage() {
                         placement: 'bottomRight',
                         key: index,
                     });
+                    console.log('nowpath ', ftpPath);
                     const response = await upload(file, ftpPath, sessionId.current);
                     api.destroy(index);
                     if (response.status === 200) {
@@ -246,6 +246,7 @@ export default function ftpPage() {
             }
             path += fileItem.name;
             await setNewPath(path);
+            console.log(ftpPath);
         }
         else {
             let path = ftpPath;
