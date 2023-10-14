@@ -5,11 +5,11 @@ from ftp import FTP
 import io
 from flask_cors import CORS
 
-app = Flask(__name__)
-CORS(app)
+app = Flask(__name__) # create a Flask app
+CORS(app) # allow cross origin
 
 
-ftpSessions: Dict[str, FTP] = {}
+ftpSessions: Dict[str, FTP] = {} # sessionId -> FTP
 
 @app.route('/connect', methods=['POST'])
 def make_connection():

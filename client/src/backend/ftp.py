@@ -33,14 +33,14 @@ class FTP:
         self.encoding = encoding
         self.timeout = timeout
         self.source_addr = source_addr
-        if host:
+        if host: # host is given, connect now
             self.connect(host)
             if(user):
                 self.login(user, passwd, acct)
         
     # close connection        
     def __exit__(self, *args):
-        if self.sock is not None:
+        if self.sock is not None: # close the socket
             try: 
                 self.quit()
             except all_errors:
@@ -49,6 +49,21 @@ class FTP:
                 self.close()
     
     def connect(self, host='', port=0, timeout=-999):
+        """
+        Establish a connection to the specified host and port with an optional timeout.
+
+        :param host: The hostname or IP address to connect to. Default is an empty string.
+        :type host: str
+
+        :param port: The port number to connect to. Default is 0.
+        :type port: int
+
+        :param timeout: The timeout for the connection. Default is -999, indicating no specific timeout.
+        :type timeout: int
+
+        :return: A welcome message or response from the server after establishing the connection.
+        :rtype: str
+        """
         if host != '':
             self.host = host
         if port > 0:
@@ -71,6 +86,18 @@ class FTP:
         self.passiveserver = val
         
     def putline(self, line):
+        """
+        Send a line of text to the server after checking for illegal newline characters.
+
+        :param line: The line of text to be sent to the server.
+        :type line: str
+
+        :raises ValueError: If the 'line' parameter contains illegal newline characters ('\\r' or '\\n').
+
+        If the debug level is greater than 0, it prints the line before sending it to the server.
+
+        :return: None
+        """
         if '\r' in line or '\n' in line:
             raise ValueError('an illegal newline character should not be contained')
         line = line + CRLF
@@ -109,6 +136,16 @@ class FTP:
         return line
     
     def getresp(self):
+        """
+        Get a response from the server and handle it accordingly.
+
+        :raises error_temp: If the response code starts with '4' (temporary error).
+        :raises error_perm: If the response code starts with '5' (permanent error).
+        :raises error_proto: If the response code does not match any expected patterns.
+
+        :return: The server response.
+        :rtype: str
+        """
         resp = self.getmultiline()
         self.lastresp = resp[:3]
         c = resp[:1]
@@ -135,6 +172,18 @@ class FTP:
         return self.voidresp()
     
     def sendport(self, host, port):
+        """
+        Send a PORT command to the server, specifying the host and port for data transfer.
+
+        :param host: The host (in the format 'A.B.C.D') to which data should be sent.
+        :type host: str
+
+        :param port: The port to use for data transfer.
+        :type port: int
+
+        :return: The response received from the server after sending the PORT command.
+        :rtype: str
+        """
         hbytes = host.split('.') # split into octets
         pbytes = [repr(port//256), repr(port%256)] # high, low byte
         bytes = ','.join(hbytes + pbytes) # make it a string
@@ -142,7 +191,9 @@ class FTP:
         return self.voidcmd(cmd) # expect a response
     
     def makeport(self):
-        # create a new socket and send a PORT command for it
+        """
+        create a new socket and send a PORT command for it
+        """ 
         sock = socket.create_server(("", 0), family=self.af, backlog = 1); # backlog: the maximum number of queued connections
         port = sock.getsockname()[1] # get proper port
         host = self.sock.getsockname()[0]
@@ -169,6 +220,19 @@ class FTP:
         return host, port
     
     def ntransfercmd(self, cmd, rest=None):
+        """
+        Prepare for a data transfer command and return the connection and size information.
+
+        :param cmd: The data transfer command (e.g., STOR, RETR).
+        :type cmd: str
+
+        :param rest: The restart marker for the data transfer. Default is None.
+        :type rest: str or None
+
+        :return: A tuple containing the connection and the size information.
+        :rtype: (socket.socket, int or None)
+        :raises error_reply: If the response from the server indicates an error.
+        """
         size = None
         if self.passiveserver:
             host, port = self.makepasv()
@@ -216,6 +280,22 @@ class FTP:
         return self.ntransfercmd(cmd, rest)[0]
     
     def login(self, user = '', passwd = '', acct = ''):
+        """
+        Log in to the FTP server with the provided user, password, and account.
+
+        :param user: The username for authentication. Default is 'anonymous'.
+        :type user: str
+
+        :param passwd: The password for authentication. Default is an empty string.
+        :type passwd: str
+
+        :param acct: The account information for authentication. Default is an empty string.
+        :type acct: str
+
+        :return: The response received from the server after logging in.
+        :rtype: str
+        :raises error_reply: If the response from the server indicates an error.
+        """
         if not user:
             user = 'anonymous'
         if not passwd:
