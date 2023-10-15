@@ -13,6 +13,7 @@ import { createTheme, ThemeProvider } from '@mui/material/styles';
 import CircularProgress from '@mui/material/CircularProgress';
 import CssBaseline from '@mui/material/CssBaseline';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import Switch from '@mui/material/Switch';
 // import ftpSession from "../utils/ftplib";
 import OpenIconSpeedDial from '../components/speedDial';
 import moment, { now } from 'moment';
@@ -56,6 +57,7 @@ export default function ftpPage() {
     const [username, setUsername] = React.useState('');
     const [ftpPath, setFtpPath] = React.useState('/');
     const [polygonPoints, setPolygonPoints] = React.useState('');
+    const [pasv, setPasv] = React.useState(true);
     const sessionId = React.useRef('');
     const fileInputRef = useRef(null);
     const [fileItems, setFileItems] = React.useState([]);
@@ -172,7 +174,7 @@ export default function ftpPage() {
             setIsLoading(false);
             if (response.status === 200) {
                 successapi(api, 'create directory success');
-                if(nowpath === ftpPath){
+                if (nowpath === ftpPath) {
                     setNewPath(ftpPath);
                 }
             }
@@ -335,7 +337,7 @@ export default function ftpPage() {
         }
     }
 
-    const handleRenameCallback = async(oldName, newName) => {
+    const handleRenameCallback = async (oldName, newName) => {
         let path = ftpPath;
         if (ftpPath[ftpPath.length - 1] !== '/') {
             path = ftpPath + '/';
@@ -357,6 +359,44 @@ export default function ftpPage() {
             errorapi(api, 'rename failed');
         }
     }
+    const handlePasvChange = async (event) => {
+        if (!pasv) {
+            try {
+                setIsLoading(true);
+                const response = await set_pasv('true', sessionId.current);
+                setIsLoading(false);
+                if (response.status === 200) {
+                    successapi(api, 'set PASV success');
+                }
+                else {
+                    errorapi(api, 'set PASV failed');
+                }
+            }
+            catch (err) {
+                console.log(err);
+                errorapi(api, 'set PASV failed');
+            }
+        }
+        else {
+            try {
+                setIsLoading(true);
+                const response = await set_pasv('false', sessionId.current);
+                setIsLoading(false);
+                if (response.status === 200) {
+                    successapi(api, 'set PORT success');
+                }
+                else {
+                    errorapi(api, 'set PORT failed');
+                }
+            }
+            catch (err) {
+                console.log(err);
+                errorapi(api, 'set PORT failed');
+            }
+        }
+        setPasv(!pasv);
+
+    };
 
 
     const generateRandomPolygon = () => {
@@ -407,13 +447,22 @@ export default function ftpPage() {
                             <div className="hidden sm:mb-8 sm:flex">
                                 <div className="relative rounded-full px-3 py-1 text-sm leading-6 text-gray-600 ring-1 ring-gray-900/10 hover:ring-gray-900/20">
                                     <RouteBread username={username} ftpPath={ftpPath} setNewPath={setNewPath} />
-                                    
+
                                 </div>
-                                <RefreshIcon className={isloading? 'rotate':''} onClick={() => setNewPath(ftpPath)} style={{ paddingLeft: 10, cursor: 'pointer', transition: 'all 0.1s ease-in' }} />
+                                <div className="relative rounded-full px-3 py-1 text-sm leading-6 text-gray-600 ring-1 ring-gray-900/10 hover:ring-gray-900/20">
+                                    {pasv ? 'PASV' : null}
+                                    <Switch
+                                        checked={pasv}
+                                        onChange={handlePasvChange}
+                                        inputProps={{ 'aria-label': 'controlled' }}
+                                    />
+                                    {pasv ? null : 'PORT'}
+                                </div>
+                                <RefreshIcon className={isloading ? 'rotate' : ''} onClick={() => setNewPath(ftpPath)} style={{ paddingLeft: 10, cursor: 'pointer', transition: 'all 0.1s ease-in' }} />
                             </div>
-                            
+
                         </div>
-                        <FileList fileItems={fileItems} handleDownloadClick={handleDownloadClick} handleDeleteClick={handleDeleteClick} handleRenameCallback={handleRenameCallback}/>
+                        <FileList fileItems={fileItems} handleDownloadClick={handleDownloadClick} handleDeleteClick={handleDeleteClick} handleRenameCallback={handleRenameCallback} />
                         <input
                             type="file"
                             ref={fileInputRef}

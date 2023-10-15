@@ -58,7 +58,7 @@ def setpassive():
         # session not found
         return jsonify({'status': 'failed', 'desc': 'session not found'}), 400
     
-    pasv = data['pasv']
+    pasv = True if data['pasv'] == 'true' else False
     ftp = ftpSessions[sessionId]
     try:
         resp = ftp.set_pasv(pasv)
@@ -100,6 +100,7 @@ def download():
     newFtp = FTP()
     newFtp.connect(originalFtp.host, originalFtp.port)
     newFtp.login(originalFtp.username, originalFtp.password)
+    newFtp.set_pasv(originalFtp.passiveserver)
     try:
         buffer = []
         def callback(data: bytes):
@@ -129,6 +130,7 @@ def upload():
     newFtp = FTP()
     newFtp.connect(orignalFtp.host, orignalFtp.port)
     newFtp.login(orignalFtp.username, orignalFtp.password)
+    newFtp.set_pasv(orignalFtp.passiveserver)
     try:
         resp = newFtp.storbinary('STOR ' + path + content.filename, content.stream)
         return jsonify({'status': 'success', 'desc': resp}), 200
