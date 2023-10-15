@@ -171,8 +171,8 @@ def mkdir():
     try:
         resp = ftp.mkd(path)
         return jsonify({'status': 'success', 'desc': resp}), 200
-    except:
-        return jsonify({'status': 'failed', 'desc': 'failed to make directory'}), 400
+    except Exception as e:
+        return jsonify({'status': 'failed', 'desc': e}), 400
 
 @app.route('/rmdir', methods=['POST'])
 def rmdir():
