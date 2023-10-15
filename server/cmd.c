@@ -742,7 +742,7 @@ int mkd_process(int sock_cmd, char *arg, char *cwd, char *rootWorkDir)
     // Show success message to client
     char successMsg[100];
     sprintf(successMsg, "Directory %s created successfully.\r\n", arg);
-    socket_send_response(sock_cmd, 226, successMsg);
+    socket_send_response(sock_cmd, 257, successMsg);
     logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, Directory %s created successfully.\n", sock_cmd, arg);
     return 0;
 }
