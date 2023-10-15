@@ -12,7 +12,7 @@
 typedef struct ftp_session_arg
 {
     int sock_cmd;
-    char rootWorkDir[MAXSIZE];
+    char* rootWorkDir;
     ThreadPool *pool;
 } ftp_session_arg;
 

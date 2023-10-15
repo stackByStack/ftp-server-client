@@ -11,10 +11,10 @@ int main(int argc, char *argv[])
     // and the directory to be served
 
     // Parse the arguments
-    const char *defaultRoot = "/tmp";
+    char *defaultRoot = "/tmp";
     int defaultPort = 21;
 
-    const char *rootWorkDir = defaultRoot;
+    char *rootWorkDir = defaultRoot;
     int port = defaultPort;
 
     for (int i = 1; i < argc; i += 2) {
@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
         ftp_session_arg *arg = (ftp_session_arg *)malloc(sizeof(ftp_session_arg));
         arg->sock_cmd = sock_cmd;
         arg->pool = &pool;
-        strcpy(arg->rootWorkDir, rootWorkDir);
+        arg->rootWorkDir = rootWorkDir;
 
         submit_task(&pool, ftp_session, (void *)arg);
         logMessage(&logger, LOG_LEVEL_INFO, "Task submitted\n");

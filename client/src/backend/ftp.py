@@ -198,7 +198,7 @@ class FTP:
         port = sock.getsockname()[1] # get proper port
         host = self.sock.getsockname()[0]
         self.sendport(host, port)
-        sock.settimeout(self.timeout)
+        # sock.settimeout(self.timeout)
         return sock
     
     def makepasv(self): 

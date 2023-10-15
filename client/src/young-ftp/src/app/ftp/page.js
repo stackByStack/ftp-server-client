@@ -126,6 +126,14 @@ export default function ftpPage() {
 
                     sessionId.current = response.data.sessionId;
                     setUsername(loginInfo.username);
+                    if(loginInfo.username === '')
+                    {
+                        setUsername('anonymous');
+                    }
+                    else
+                    {
+                        setUsername(loginInfo.username);
+                    }
                     setIsLoading(true);
                     try {
                         const response1 = await login(loginInfo.username, loginInfo.password, sessionId.current);
@@ -243,10 +251,27 @@ export default function ftpPage() {
         if (fileItem.type === 'directory') {
             // setup new ftp path
             let path = ftpPath;
-            if (ftpPath[ftpPath.length - 1] !== '/') {
-                path = ftpPath + '/';
+            if(fileItem.name === '..')
+            {
+                const index = path.lastIndexOf('/');
+                path = path.substring(0, index);
+                if(path === '')
+                {
+                    path = '/';
+                }
             }
-            path += fileItem.name;
+            else if (fileItem.name === '.')
+            {
+                path = ftpPath;
+            }
+            else
+            {
+                if (ftpPath[ftpPath.length - 1] !== '/') {
+                    path = ftpPath + '/';
+                }
+                path += fileItem.name;
+            }
+            
             await setNewPath(path);
             console.log(ftpPath);
         }

@@ -622,6 +622,7 @@ int cwd_process(int sock_cmd, char *arg, char *cwd, char *rootWorkDir)
 
 int list_process(int sock_cmd, int sock_data, char *arg, char *cwd, char *rootWorkDir, int *dataLinkEstablished, pthread_mutex_t *mutex)
 {
+    logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, cwd: %s, rootWorkDir: %s, arg: %s\n", sock_cmd, cwd, rootWorkDir, arg);
     pthread_mutex_lock(mutex);
     if (*dataLinkEstablished == 0)
     {
