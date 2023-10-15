@@ -51,7 +51,7 @@ const infoapi = (api, message) => {
 }
 
 const defaultTheme = createTheme();
-export default function ftpPage() {
+export default function FtpPage() {
     const [isLogin, setIsLogin] = React.useState(false);
     const [isloading, setIsLoading] = React.useState(false);
     const [username, setUsername] = React.useState('');
@@ -315,6 +315,11 @@ export default function ftpPage() {
     const handleDeleteClick = async (fileItem) => {
         if (fileItem.type === 'directory') {
             // setup new ftp path
+            if(fileItem.name === '..' || fileItem.name === '.')
+            {
+                warningapi(api, 'cannot delete this directory');
+                return;
+            }
             let path = ftpPath;
             if (ftpPath[ftpPath.length - 1] !== '/') {
                 path = ftpPath + '/';
@@ -474,7 +479,7 @@ export default function ftpPage() {
                                     <RouteBread username={username} ftpPath={ftpPath} setNewPath={setNewPath} />
 
                                 </div>
-                                <div className="relative rounded-full px-3 py-1 text-sm leading-6 text-gray-600 ring-1 ring-gray-900/10 hover:ring-gray-900/20">
+                                <div className="relative rounded-full px-3 py-1 text-sm leading-6 text-gray-600 ring-1 ring-gray-900/10 hover:ring-gray-900/20" style={{marginLeft: 10}}>
                                     {pasv ? 'PASV' : null}
                                     <Switch
                                         checked={pasv}
@@ -483,7 +488,8 @@ export default function ftpPage() {
                                     />
                                     {pasv ? null : 'PORT'}
                                 </div>
-                                <RefreshIcon className={isloading ? 'rotate' : ''} onClick={() => setNewPath(ftpPath)} style={{ paddingLeft: 10, cursor: 'pointer', transition: 'all 0.1s ease-in' }} />
+                                <RefreshIcon className={isloading ? 'rotate' : ''} onClick={() => setNewPath(ftpPath)} style={{ marginLeft: 10, cursor: 'pointer', transition: 'all 0.1s ease-in' }} />
+                                
                             </div>
 
                         </div>

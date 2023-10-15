@@ -1,5 +1,5 @@
 import axios from 'axios'
-const baseUrl = 'http://localhost:5000'
+const baseUrl = 'http://8.142.111.243/api'
 
 /**
  * Connect to a server using the specified host and port.
@@ -31,12 +31,12 @@ export const login = async (username, password, sessionId) => {
 /**
  * Set the PASV (Passive) mode with the specified configuration and session ID.
  *
- * @param {boolean} pasv - A boolean indicating whether to enable or disable PASV mode.
+ * @param {string} pasv - A boolean indicating whether to enable or disable PASV mode.
  * @param {string} sessionId - The session ID associated with the PASV mode configuration.
  * @returns {Promise} A promise that resolves to the response from the server after setting PASV mode.
  */
 export const set_pasv = async (pasv, sessionId) => {
-    const response = await axios.post(`${baseUrl}/set_pasv`, { pasv: pasv, sessionId: sessionId })
+    const response = await axios.post(`${baseUrl}/setpassive`, { pasv: pasv, sessionId: sessionId })
     return response
 }
 
