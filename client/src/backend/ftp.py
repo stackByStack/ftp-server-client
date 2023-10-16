@@ -197,6 +197,7 @@ class FTP:
         sock = socket.create_server(("", 0), family=self.af, backlog = 1); # backlog: the maximum number of queued connections
         port = sock.getsockname()[1] # get proper port
         host = self.sock.getsockname()[0]
+        print(self.sock.getsockname())
         self.sendport(host, port)
         # sock.settimeout(self.timeout)
         return sock

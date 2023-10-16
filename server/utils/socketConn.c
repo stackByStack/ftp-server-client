@@ -193,44 +193,30 @@ int socket_send_response(int sockfd, int rc, char *msg)
     return 0;
 }
 
-int socket_get_ip(char *ip)
-{
-    char host[100];
-    struct hostent *hostinfo;
-
-    if (gethostname(host, sizeof(host)) < 0)
-    {
-        #ifdef DEBUG
-        perror("Error getting host name");
-        #endif
-        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Error getting host name\n", -1);
+int socket_get_ip(char *ip) {
+    struct ifaddrs *ifap, *ifa;
+    struct sockaddr_in *sa;
+    
+    if (getifaddrs(&ifap) != 0) {
+        perror("Error getting interface addresses");
         return -1;
     }
 
-    if ((hostinfo = gethostbyname(host)) == NULL)
-    {
-        #ifdef DEBUG
-        perror("Error getting host by name");
-        #endif
-        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, Error getting host by name\n", -1);
-        return -1;
+    for (ifa = ifap; ifa != NULL; ifa = ifa->ifa_next) {
+        if (ifa->ifa_addr != NULL && ifa->ifa_addr->sa_family == AF_INET) {
+            sa = (struct sockaddr_in *) ifa->ifa_addr;
+            if (strcmp(ifa->ifa_name, "lo") != 0) { // Exclude loopback interface
+                strcpy(ip, inet_ntoa(sa->sin_addr));
+                freeifaddrs(ifap);
+                return 0;
+            }
+        }
     }
 
-    struct in_addr **addr_list = (struct in_addr **)hostinfo->h_addr_list;
+    freeifaddrs(ifap);
 
-    if (addr_list[0] == NULL)
-    {
-        #ifdef DEBUG
-        fprintf(stderr, "No IP address found for the host\n");
-        #endif
-        logMessage(&logger, LOG_LEVEL_ERROR, "sd: %d, No IP address found for the host\n", -1);
-        return -1;
-    }
-
-    strcpy(ip, inet_ntoa(*addr_list[0]));
-    logMessage(&logger, LOG_LEVEL_INFO, "sd: %d, IP address: %s\n", -1, ip);
-
-    return 0;
+    fprintf(stderr, "No IP address found for the host\n");
+    return -1;
 }
 
 void close_data_conn(int sock_data, int *dataLinkEstablished, pthread_mutex_t *mutex)

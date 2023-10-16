@@ -1,5 +1,5 @@
 import axios from 'axios'
-const baseUrl = 'http://8.142.111.243/api'
+const baseUrl = 'http://localhost:5000'
 
 /**
  * Connect to a server using the specified host and port.
